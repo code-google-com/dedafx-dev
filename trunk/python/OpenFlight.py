@@ -110,6 +110,8 @@ EXTENDED_MATERIAL_REFLECTION_OPCODE = 147
 class Record:
     def __init__(self, data):
         self.data = data
+        (_d,_d2) = unpack_from('>HH',data,offset=0)
+        #print len(data), str(_d), str(_d2)
         assert len(data) >= 4
         (self.opcode,) = unpack_from(">h",data, offset=0)
         (self.length,) = unpack_from(">H",data, offset=2)
@@ -201,6 +203,15 @@ class Face(Record):
         
     def __load(self):
         pass
+    
+class DOF(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == DOF_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
         
 class ColorPalette(Record):
     def __init__(self, data):
@@ -210,7 +221,70 @@ class ColorPalette(Record):
         
     def __load(self):
         pass
+    
+class Matrix(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == MATRIX_OPCODE
+        self.__load()
         
+    def __load(self):
+        pass
+    
+class Vector(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == VECTOR_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+    
+class Multitexture(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == MULTITEXTURE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+
+class UVList(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == UV_LIST_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+    
+class BSP(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == BSP_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+
+class Xref(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == XREF_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+
+class TexturePalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == TEXTURE_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+    
 class VertexPalette(Record):
     def __init__(self, data):
         Record.__init__(self, data)
@@ -218,8 +292,8 @@ class VertexPalette(Record):
         self.__load()
         
     def __load(self):
-        pass
-
+        (self.total_length, ) = unpack_from('>i', self.data, offset=4)
+        
 class Vertex(Record):
     def __init__(self, data):
         Record.__init__(self, data)
@@ -239,85 +313,483 @@ class Vertex(Record):
         (self.v,) = unpack_from('>f', self.data, offset=48)
         (self.abgr,) = unpack_from('>i', self.data, offset=52)
         (self.color_index,) = unpack_from('>i', self.data, offset=56)
-        
-        
-class Mesh(Record):
+      
+class VertexList(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == VERTEX_LIST_OPCODE
+        self.__load()
         
-class LightPoint(Record):
-    def __init__(self, data):
-        Record.__init__(self, data)
-        
-class DOF(Record):
-    def __init__(self, data):
-        Record.__init__(self, data)
-        
-class BSP(Record):
-    def __init__(self, data):
-        Record.__init__(self, data)
-        
-class Xref(Record):
-    def __init__(self, data):
-        Record.__init__(self, data)
-        
+    def __load(self):
+        pass
+
 class LOD(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == LOD_OPCODE
+        self.__load()
         
-class Sound(Record):
+    def __load(self):
+        pass
+
+class BBox(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == BOUNDING_BOX_OPCODE
+        self.__load()
         
-class LightSource(Record):
+    def __load(self):
+        pass
+
+class EyepointTrackplanePalette(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == EYEPOINT_TRACKPLANE_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+
+class Mesh(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == MESH_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+         
+class LocalVertexPool(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LOCAL_VERTEX_POOL_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class MeshPrimitive(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == MESH_PRIMITIVE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
         
 class RoadSegment(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == ROAD_SEGMENT_OPCODE
+        self.__load()
         
-class RoadConstruction(Record):
+    def __load(self):
+        pass
+        
+class RoadZone(Record):
     def __init__(self, data):
         Record.__init__(self, data)
-
+        assert self.opcode == ROAD_ZONE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class MorphVertexList(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == MORPH_VERTEX_LIST_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class LinkagePalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LINKAGE_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class Sound(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == SOUND_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
 class RoadPath(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == ROAD_PATH_OPCODE
+        self.__load()
         
-class ClipRegion(Record):
+    def __load(self):
+        pass
+        
+class SoundPalette(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == SOUND_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class GeneralMatrix(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == GENERAL_MATRIX_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
         
 class Text(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == TEXT_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
         
 class Switch(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == SWITCH_OPCODE
+        self.__load()
         
-class CAT(Record):
+    def __load(self):
+        pass
+        
+class LineStylePalette(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == LINE_STYLE_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class ClipRegion(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == CLIP_REGION_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
         
 class Extension(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == EXTENSION_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class LightSource(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LIGHT_SOURCE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class LightSourcePalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LIGHT_SOURCE_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class BoundingSphere(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == BOUNDING_SPHERE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class BoundingCylinder(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == BOUNDING_CYLINDER_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class BoundingConvexHull(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == BOUNDING_CONVEX_HULL_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class BoundingVolumeCenter(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == BOUNDING_VOLUME_CENTER_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class BoundingVolumeOrientation(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == BOUNDING_VOLUME_ORIENTATION_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class LightPoint(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LIGHT_POINT_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class TextureMappingPalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == TEXTURE_MAPPING_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class MaterialPalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == MATERIAL_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class NameTable(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == NAME_TABLE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class CAT(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == CAT_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class CatData(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == CAT_DATA_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class BoundingHistogram(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == BOUNDING_HISTOGRAM_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
         
 class Curve(Record):
     def __init__(self, data):
         Record.__init__(self, data)
+        assert self.opcode == CURVE_OPCODE
+        self.__load()
         
-def createRecord(opcode, data):
-    if opcode == HEADER_OPCODE:
-        return Header(data)
-    elif opcode == COLOR_PALETTE_OPCODE:
-        return ColorPalette(data)
-    elif opcode == VERTEX_PALETTE_OPCODE:
-        return VertexPalette(data)
-    elif opcode == VERTEX_COLOR_NORMAL_UV_OPCODE:
-        return Vertex(data)
+    def __load(self):
+        pass
+        
+class RoadConstruction(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == ROAD_CONSTRUCTION_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class LightPointAppearancePalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LIGHT_POINT_APPEARANCE_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+        
+class LightPointAnimationPalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LIGHT_POINT_ANIMATION_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class IndexedLightPoint(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == INDEXED_LIGHT_POINT_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class LightPointSystem(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == LIGHT_POINT_SYSTEM_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class IndexedString(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == INDEXED_STRING_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ShaderPalette(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == SHADER_PALETTE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialHeader(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_HEADER_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialAmbient(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_AMBIENT_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialDiffuse(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_DIFFUSE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialSpecular(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_SPECULAR_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialEmissive(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_EMISSIVE_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialAlpha(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_ALPHA_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialLightmap(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_LIGHTMAP_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialNormalmap(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_NORMALMAP_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialBumpmap(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_BUMPMAP_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialShadowmap(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_SHADOWMAP_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
+ 
+class ExtendedMaterialReflection(Record):
+    def __init__(self, data):
+        Record.__init__(self, data)
+        assert self.opcode == EXTENDED_MATERIAL_REFLECTION_OPCODE
+        self.__load()
+        
+    def __load(self):
+        pass
         
 class OpenFlightFile:
     """4 byte opcode for each record, 4 byte multiple padding, big endian
@@ -367,45 +839,214 @@ class OpenFlightFile:
     """
 
     def __init__(self, filename):
-        self.data = ''
-        self.index = 0 # byte offset of data pointer
+        _data = ''
         self.filename = filename
-        _f = open(filename,'r')
+        _f = open(filename,'rb')
         # cache the file contents and close
         _f.seek(0,2)
-        _pos = _f.tell()
+        _end = _f.tell()
         _f.seek(0,0) #back to the beginning
-        #self.data = _f.read(_pos)
-        self.recs = []
+        _data = _f.read()
+        assert len(self.data) == _end
+        _f.close()
+        self.records = [] # these are "global" nodes (ie. vertex definitions)
+        self.children = [] # this node is a special case top-level parent for the node tree
         
         # serialize the data into something more meaningful
-        print '_pos:',_pos
-        while _f.tell() < _pos-4:
-            #try:
-            rec = Record(_f.read(4))
-            _f.seek(-4,1)
-            data = None
-            if rec.opcode <= 147 and rec.opcode > 0:
-                data = _f.read(rec.length) 
-            else:
-                _f.seek(4,1)
-            print 'opcode:', rec.opcode, 'length:',rec.length, '_f.tell():', _f.tell()                
+        print '_end:',_end
+        _pos = 0
+        while _pos <= _end-4:
+            rec = Record(_data[_pos:_pos+4])
+            if _pos+rec.length > _end:
+                raise Exception, 'File parse error!'
+            data =  _data[_pos:_pos+rec.length]          
             if data:
-                r = createRecord(rec.opcode, data)
+                r = self.createRecord(rec.opcode, data)
                 if r:
-                    self.recs.append(r)
+                    print 'opcode:', rec.opcode, 'length:',rec.length, r
+                    self.records.append(r)
+                else:
+                    print 'record not created for opcode', rec.opcode
+            _pos += rec.length
             del rec
-            #except:
-            #    print 'exception'
-            #    _f.seek(4,1)
-        _f.close()
-        
-    def next(self):
-        """return the next record as a byte stream"""
-        raise StopIteration
+            if _pos >= _end:
+                break
         
     def version(self):
         return self.header.format_revision
+    
+    def createRecord(self, opcode, data):
+        if opcode == HEADER_OPCODE:
+            return Header(data)
+        elif opcode == GROUP_OPCODE:
+            return Group(data)
+        elif opcode == OBJECT_OPCODE:
+            return Object(data)
+        elif opcode == FACE_OPCODE :
+            return Face(data)
+        #elif opcode == PUSH_LEVEL_OPCODE = 10
+        #elif opcode == POP_LEVEL_OPCODE = 11
+        elif opcode == DOF_OPCODE:
+            return DOF(data)
+        #elif opcode == PUSH_SUBFACE_OPCODE = 19
+        #elif opcode == POP_SUBFACE_OPCODE = 20
+        #elif opcode == PUSH_EXTENSION_OPCODE = 19
+        #elif opcode == POP_EXTENSION_OPCODE = 20
+        #elif opcode == CONTINUATION_OPCODE = 23
+        #elif opcode == COMMENT_OPCODE = 31
+        elif opcode == COLOR_PALETTE_OPCODE:
+            return ColorPalette(data)
+        #elif opcode == LONG_ID_OPCODE = 33
+        elif opcode == MATRIX_OPCODE:
+            return Matrix(data)
+        elif opcode == VECTOR_OPCODE:
+            return Vector(data)
+        elif opcode == MULTITEXTURE_OPCODE:
+            return Multitexture(data)
+        elif opcode == UV_LIST_OPCODE:
+            return UvList(data)
+        elif opcode == BSP_OPCODE:
+            return BSP(data)
+        #elif opcode == REPLICATE_OPCODE = 60
+        #elif opcode == INSTANCE_REFERENCE_OPCODE = 61
+        #elif opcode == INSTANCE_DEFINITION_OPCODE = 62
+        elif opcode == XREF_OPCODE:
+            return Xref(data)
+        elif opcode == TEXTURE_PALETTE_OPCODE:
+            return TexturePalette(data)
+        elif opcode == VERTEX_PALETTE_OPCODE:
+            return VertexPalette(data)
+        #elif opcode == VERTEX_COLOR_OPCODE = 68
+        #elif opcode == VERTEX_COLOR_NORMAL_OPCODE = 69
+        elif opcode == VERTEX_COLOR_NORMAL_UV_OPCODE:
+            return Vertex(data)
+        #elif opcode == VERTEX_COLOR_UV_OPCODE = 71
+        elif opcode == VERTEX_LIST_OPCODE:
+            return VertexList(data)
+        elif opcode == LOD_OPCODE:
+            return LOD(data)
+        elif opcode == BOUNDING_BOX_OPCODE:
+            return BBox(data)
+        #elif opcode == ROTATE_ABOUT_EDGE_OPCODE = 76
+        #elif opcode == TRANSLATE_OPCODE = 78
+        #elif opcode == SCALE_OPCODE = 79
+        #elif opcode == ROTATE_ABOUT_POINT_OPCODE = 80
+        #elif opcode == ROTATE_SCALE_TO_POINT_OPCODE = 81
+        #elif opcode == PUT_OPCODE = 82
+        elif opcode == EYEPOINT_TRACKPLANE_PALETTE_OPCODE:
+            return EyepointTrackplanePalette(data)
+        elif opcode == MESH_OPCODE:
+            return Mesh(data)
+        elif opcode == LOCAL_VERTEX_POOL_OPCODE:
+            return LocalVertexPool(data)
+        elif opcode == MESH_PRIMITIVE_OPCODE:
+            return MeshPrimative(data)
+        elif opcode == ROAD_SEGMENT_OPCODE:
+            return RoadSegment(data)
+        elif opcode == ROAD_ZONE_OPCODE:
+            return RoadZone(data)
+        elif opcode == MORPH_VERTEX_LIST_OPCODE:
+            return MorphVertexList(data)
+        elif opcode == LINKAGE_PALETTE_OPCODE:
+            return LinkagePalette(data)
+        elif opcode == SOUND_OPCODE:
+            return Sound(data)
+        elif opcode == ROAD_PATH_OPCODE:
+            return RoadPath(data)
+        elif opcode == SOUND_PALETTE_OPCODE:
+            return SoundPalette(data)
+        elif opcode == GENERAL_MATRIX_OPCODE:
+            return GeneralMatrix(data)
+        elif opcode == TEXT_OPCODE:
+            return Text(data)
+        elif opcode == SWITCH_OPCODE:
+            return Switch(data)
+        elif opcode == LINE_STYLE_PALETTE_OPCODE:
+            return LineStyle(data)
+        elif opcode == CLIP_REGION_OPCODE:
+            return ClipRegion(data)
+        elif opcode == EXTENSION_OPCODE:
+            return Extension(data)
+        elif opcode == LIGHT_SOURCE_OPCODE:
+            return LightSource(data)
+        elif opcode == LIGHT_SOURCE_PALETTE_OPCODE:
+            return LightSourcePalette(data)
+        #elif opcode == RESERVED103_OPCODE = 103
+        #elif opcode == RESERVED104_OPCODE = 104
+        elif opcode == BOUNDING_SPHERE_OPCODE:
+            return BoundingSphere(data)
+        elif opcode == BOUNDING_CYLINDER_OPCODE:
+            return BoundingCylinder(data)
+        elif opcode == BOUNDING_CONVEX_HULL_OPCODE:
+            return BoundingConvexHull(data)
+        elif opcode == BOUNDING_VOLUME_CENTER_OPCODE:
+            return BoundingVolumeCenter(data)
+        elif opcode == BOUNDING_VOLUME_ORIENTATION_OPCODE:
+            return BoundingVolumeOrientation(data)
+        #elif opcode == RESERVED110_OPCODE = 110
+        elif opcode == LIGHT_POINT_OPCODE:
+            return LightPoint(data)
+        elif opcode == TEXTURE_MAPPING_PALETTE_OPCODE:
+            return TextureMappingPalette(data)
+        elif opcode == MATERIAL_PALETTE_OPCODE:
+            return MaterialPalette(data)
+        elif opcode == NAME_TABLE_OPCODE:
+            return NameTable(data)
+        elif opcode == CAT_OPCODE:
+            return CAT(data)
+        elif opcode == CAT_DATA_OPCODE:
+            return CATData(data)
+        #elif opcode == RESERVED117_OPCODE = 117
+        #elif opcode == RESERVED118_OPCODE = 118
+        elif opcode == BOUNDING_HISTOGRAM_OPCODE:
+            return BoundingHistogram(data)
+        #elif opcode == RESERVED120_OPCODE = 120
+        #elif opcode == RESERVED121_OPCODE = 121
+        #elif opcode == PUSH_ATTRIBUTE_OPCODE = 122
+        #elif opcode == POP_ATTRIBUTE_OPCODE = 123
+        #elif opcode == RESERVED124_OPCODE = 124
+        #elif opcode == RESERVED125_OPCODE = 125
+        elif opcode == CURVE_OPCODE:
+            return Curve(data)
+        elif opcode == ROAD_CONSTRUCTION_OPCODE:
+            return RoadConstruction(data)
+        elif opcode == LIGHT_POINT_APPEARANCE_PALETTE_OPCODE:
+            return LightPointAppearancePalette(data)
+        elif opcode == LIGHT_POINT_ANIMATION_PALETTE_OPCODE:
+            return LightPointAnimationPalette(data)
+        elif opcode == INDEXED_LIGHT_POINT_OPCODE:
+            return IndexedLightPoint(data)
+        elif opcode == LIGHT_POINT_SYSTEM_OPCODE:
+            return LightPointSystem(data)
+        elif opcode == INDEXED_STRING_OPCODE:
+            return IndexedString(data)
+        elif opcode == SHADER_PALETTE_OPCODE:
+            return ShaderPalette(data)
+        #elif opcode == RESERVED134_OPCODE = 134
+        elif opcode == EXTENDED_MATERIAL_HEADER_OPCODE:
+            return ExtendedMaterialHeader(data)
+        elif opcode == EXTENDED_MATERIAL_AMBIENT_OPCODE:
+            return ExtendedMaterialAmbient(data)
+        elif opcode == EXTENDED_MATERIAL_DIFFUSE_OPCODE:
+            return ExtendedMaterialDiffuse(data)
+        elif opcode == EXTENDED_MATERIAL_SPECULAR_OPCODE:
+            return ExtendedMaterialSpecular(data)
+        elif opcode == EXTENDED_MATERIAL_EMISSIVE_OPCODE:
+            return ExtendedMaterialEmissive(data)
+        elif opcode == EXTENDED_MATERIAL_ALPHA_OPCODE:
+            return ExtendedMaterialAlpha(data)
+        elif opcode == EXTENDED_MATERIAL_LIGHTMAP_OPCODE:
+            return ExtendedMaterialLightmap(data)
+        elif opcode == EXTENDED_MATERIAL_NORMALMAP_OPCODE:
+            return ExtendedMaterialNormalmap(data)
+        elif opcode == EXTENDED_MATERIAL_BUMPMAP_OPCODE:
+            return ExtendedMaterialBumpmap(data)
+        #elif opcode == RESERVED144_OPCODE = 144
+        elif opcode == EXTENDED_MATERIAL_SHADOWMAP_OPCODE:
+            return ExtendedMaterialShadowmap(data)
+        #elif opcode == RESERVED146_OPCODE = 146
+        elif opcode == EXTENDED_MATERIAL_REFLECTION_OPCODE:
+            return ExtendedMaterialReflection(data)
         
 def _test():
     import doctest
@@ -413,4 +1054,4 @@ def _test():
     
 if __name__=='__main__':
     #_test()
-    ofile = OpenFlightFile("C:/box1.flt")
+    ofile = OpenFlightFile("d:/box1.flt")

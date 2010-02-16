@@ -11,6 +11,12 @@ http://dedafx-dev.googlecode.com
 
 """
 
+# record node types
+CONTROL_RECORD_TYPE = 0
+PRIMARY_RECORD_TYPE = 1
+ANCILLARY_RECORD_TYPE = 2
+CONTINUATION_RECORD_TYPE = 3
+
 # OPCODES!
 HEADER_OPCODE = 1
 GROUP_OPCODE = 2
@@ -121,22 +127,15 @@ class Record:
     def __init__(self, data):        
         assert len(data) >= 4
         self.data = data
-        #(self._opcode,) = unpack_from(">h",data, offset=0)
-        #(self.length,) = unpack_from(">H",data, offset=2)
-        #if self.length <= 0: # prevent endless loops with bad data
-        #    raise Exception
-        #self.id = ''
-        #if len(data) >= 12:
-        #    (self.id,) = unpack_from(">8s",data, offset=4)
-        #    self.id = self.id.replace('\x00',' ').strip()
         self.parent = None
         self.children = []
+        self.node_type = PRIMARY_RECORD_TYPE # override if different in the derived class
         
     def get_opcode(self):
         (_opcode,) = unpack_from(">h", self.data, offset=0)
         return _opcode
     def set_opcode(self, val):
-        self.data[0:2] = pack_into(">h", self.data, 0, val)
+        pack_into(">h", self.data, 0, val)
     opcode = property(get_opcode, set_opcode, None, "Record opcode")
     
     def get_length(self):
@@ -151,7 +150,7 @@ class Record:
     
     def get_id(self):
         if len(self.data) >= 12:
-            (_id,) = unpack_from(">8s",data, offset=4)
+            (_id,) = unpack_from(">8s",self.data, offset=4)
             _id = _id.replace('\x00',' ').strip()
             return _id
         return None
@@ -186,7 +185,7 @@ class Header(Record):
         (self.next_lod_id,) = unpack_from(">h",self.data, offset=54)
         (self.next_object_id,) = unpack_from(">h",self.data, offset=56)
         (self.next_face_id,) = unpack_from(">h",self.data, offset=58)
-        (self.unit_multiplier,) = unpack_from(">h",self.data, offset=60)
+        (self.unit_multiplier,) = unpack_from(">h",self.data, offset=60) # this is always 1
         
         # 0 = Meters
         # 1 = Kilometers
@@ -275,8 +274,11 @@ class Header(Record):
         (self.next_mesh_id,) = unpack_from(">H",self.data, offset=300)
         (self.next_lightpointsystem_id,) = unpack_from(">H",self.data, offset=302)
         
-        (self.earth_major_axis,) = unpack_from(">d",self.data, offset=308)
-        (self.earth_minor_axis,) = unpack_from(">d",self.data, offset=316)
+        self.earth_major_axis = 0
+        self.earth_minor_axis = 0
+        if self.format_revision > 1570:
+            (self.earth_major_axis,) = unpack_from(">d",self.data, offset=308)
+            (self.earth_minor_axis,) = unpack_from(">d",self.data, offset=316)
         
     def __str__(self):
         return '<OpenFlight Header>'
@@ -290,16 +292,84 @@ class Group(Record):
     def __init__(self, data):
         Record.__init__(self, data)
         assert self.opcode == GROUP_OPCODE
-        self.__load()
-        
-    def __load(self):
-        pass
     
     def __str__(self):
-        return '<OpenFlight Group>'
+        return '<OpenFlight Group id:%s>' % (self.id)
     
     def __repr__(self):
-        return '<OpenFlight Group>'
+        return '<OpenFlight Group id:%s>' % (self.id)
+    
+    def get_priority(self):
+        (_,) = unpack_from(">h", self.data, 12)
+        return _
+    def set_priority(self, val):
+        pack_into(">h", self.data, 12, val)
+    priority = property(get_priority, set_priority, None, "Group priority")
+    
+    def get_flags(self):
+        (_,) = unpack_from(">h", self.data, 14)
+        return _
+    def set_flags(self, val):
+        pack_into(">h", self.data, 14, val)
+    flags = property(get_flags, set_flags, None, """Group flags: 
+0 = Reserved
+1 = Forward animation
+2 = Swing animation
+3 = Bounding box follows
+4 = Freeze bounding box
+5 = Default parent
+6 = Backward animation
+7 = Preserve at runtime
+8-31 = Spare""")
+    
+    def get_se1(self):
+        (_,) = unpack_from(">h", self.data, 20)
+        return _
+    def set_se1(self, val):
+        pack_into(">h", self.data, 20, val)
+    special_effect_1 = property(get_se1, set_se1, None, "Group special effect 1")
+    
+    def get_se2(self):
+        (_,) = unpack_from(">h", self.data, 22)
+        return _
+    def set_se2(self, val):
+        pack_into(">h", self.data, 22, val)
+    special_effect_2 = property(get_se2, set_se2, None, "Group special effect 2")
+    
+    def get_significance(self):
+        (_,) = unpack_from(">h", self.data, 24)
+        return _
+    def set_significance(self, val):
+        pack_into(">h", self.data, 24, val)
+    significance = property(get_significance, set_significance, None, "Group significance")
+    
+    def get_layerCode(self):
+        (_,) = unpack_from(">b", self.data, 26)
+        return _
+    def set_layerCode(self, val):
+        pack_into(">b", self.data, 26, val)
+    layer_code = property(get_layerCode, set_layerCode, None, "Group layer code")
+    
+    def get_loopCount(self):
+        (_,) = unpack_from(">i", self.data, 32)
+        return _
+    def set_loopCount(self, val):
+        pack_into(">i", self.data, 32, val)
+    loop_count = property(get_loopCount, set_loopCount, None, "Group loop count")
+    
+    def get_loopDuration(self):
+        (_,) = unpack_from(">f", self.data, 36)
+        return _
+    def set_loopDuration(self, val):
+        pack_into(">f", self.data, 36, val)
+    loop_duration = property(get_loopDuration, set_loopDuration, None, "Group loop duration in seconds")
+    
+    def get_frameDuration(self):
+        (_,) = unpack_from(">f", self.data, 40)
+        return _
+    def set_frameDuration(self, val):
+        pack_into(">f", self.data, 40, val)
+    frame_duration = property(get_frameDuration, set_frameDuration, None, "Group frame duration in seconds")
         
 class Object(Record):
     def __init__(self, data):
@@ -411,6 +481,30 @@ class DOF(Record):
     
     def __repr__(self):
         return '<OpenFlight DOF>'
+    
+class Comment(Record):
+    def __init__(self, data):
+        Record.__init__(self, data[:4])
+        self.data = data
+        assert self.opcode == COMMENT_OPCODE
+    
+    def __str__(self):
+        return '<OpenFlight Comment>'
+    
+    def __repr__(self):
+        return '<OpenFlight Comment>'
+    
+    def get_comment(self):
+        frm = '>'+str(self.length-4)+'s'
+        (_,) = unpack_from(frm,data, offset=4)
+        _ = _.replace('\x00',' ').strip()
+        return _
+    def set_comment(self, val):
+        self.data = self.data[:2]
+        pack_into(">h", self.data, 2, len(val)+4)
+        fmt = '>'+str(len(val))+'s'
+        pack_into(fmt, self.data, 4, str(val))
+    comment = property(get_comment, set_comment, None, "Comment string")
         
 class ColorPalette(Record):
     def __init__(self, data):
@@ -426,6 +520,30 @@ class ColorPalette(Record):
     
     def __repr__(self):
         return '<OpenFlight ColorPalette>'
+    
+class LongID(Record):
+    def __init__(self, data):
+        Record.__init__(self, data[:4])
+        self.data = data
+        assert self.opcode == LONG_ID_OPCODE
+    
+    def __str__(self):
+        return '<OpenFlight LongID id:%s>' % (self.long_id)
+    
+    def __repr__(self):
+        return '<OpenFlight LongID id:%s>' % (self.long_id)
+    
+    def get_longId(self):
+        frm = '>'+str(self.length-4)+'s'
+        (lid,) = unpack_from(frm,self.data, offset=4)
+        lid = lid.replace('\x00',' ').strip()
+        return lid
+    def set_longId(self, val):
+        self.data = self.data[:2]
+        pack_into(">h", self.data, 2, len(val)+4)
+        fmt = '>'+str(len(val))+'s'
+        pack_into(fmt, self.data, 4, str(val))
+    long_id = property(get_longId, set_longId, None, "LongID string id")
     
 class Matrix(Record):
     def __init__(self, data):
@@ -504,18 +622,54 @@ class BSP(Record):
 
 class Xref(Record):
     def __init__(self, data):
-        Record.__init__(self, data)
+        Record.__init__(self, data[:4])
         assert self.opcode == XREF_OPCODE
-        self.__load()
-        
-    def __load(self):
-        pass
+        self.data = data
+        assert len(self.data) == 216
     
     def __str__(self):
         return '<OpenFlight Xref>'
     
     def __repr__(self):
         return '<OpenFlight Xref>'
+    
+    def get_path(self):
+        (_,) = unpack_from(">200s", self.data, 4)
+        return _.split("\0")[0]
+    def set_path(self, val):
+        assert len(val) < 200
+        zeros = ''
+        for i in range(200):
+            zeros += '\x00'
+        pack_into('>200s', self.data, 4, zeros)
+        frm = '>' + str(len(str(val))) + 's'
+        pack_into(frm, self.data, 4, val)
+    path = property(get_path, set_path, None, """Xref file path. 0 terminates
+Format of this string is: filename<node name>
+if <node name> absent, references entire file""")
+    
+    def get_flags(self):
+        (_,) = unpack_from(">i", self.data, 208)
+        return _
+    def set_flags(self, val):
+        pack_into(">i", self.data, 208, val)
+    flags = property(get_flags, set_flags, None, """Xref flags: bits from left to right)
+0 = Color palette override
+1 = Material palette override
+2 = Texture and texture mapping palette override
+3 = Line style palette override
+4 = Sound palette override
+5 = Light source palette override
+6 = Light point palette override
+7 = Shader palette override
+8-31 = Spare""")
+    
+    def get_bbox(self):
+        (_,) = unpack_from(">h", self.data, 212)
+        return _
+    def set_bbox(self, val):
+        pack_into(">h", self.data, 212, val)
+    bbox_view = property(get_bbox, set_bbox, None, "Xref: view as bounding box")
 
 class TexturePalette(Record):
     def __init__(self, data):
@@ -598,16 +752,86 @@ class LOD(Record):
     def __init__(self, data):
         Record.__init__(self, data)
         assert self.opcode == LOD_OPCODE
-        self.__load()
-        
-    def __load(self):
-        pass
     
     def __str__(self):
         return '<OpenFlight LOD>'
     
     def __repr__(self):
         return '<OpenFlight LOD>'
+    
+    def get_switchInDistance(self):
+        (_sid,) = unpack_from(">d", self.data, 16)
+        return _sid
+    def set_switchInDistance(self, val):
+        pack_into(">d", self.data, 16, val)
+    switch_in_distance = property(get_switchInDistance, set_switchInDistance, None, "LOD switch in distance")
+    
+    def get_switchOutDistance(self):
+        (_,) = unpack_from(">d", self.data, 24)
+        return _
+    def set_switchOutDistance(self, val):
+        pack_into(">d", self.data, 24, val)
+    switch_out_distance = property(get_switchOutDistance, set_switchOutDistance, None, "LOD switch out distance")
+    
+    def get_specialEffect1(self):
+        (_,) = unpack_from(">h", self.data, 32)
+        return _
+    def set_specialEffect1(self, val):
+        pack_into(">h", self.data, 32, val)
+    special_effect_1 = property(get_specialEffect1, set_specialEffect1, None, "LOD special effect 1")
+    
+    def get_specialEffect2(self):
+        (_,) = unpack_from(">h", self.data, 34)
+        return _
+    def set_specialEffect2(self, val):
+        pack_into(">h", self.data, 34, val)
+    special_effect_2 = property(get_specialEffect2, set_specialEffect2, None, "LOD special effect 2")
+    
+    def get_flags(self):
+        (_,) = unpack_from(">i", self.data, 36)
+        return _
+    def set_flags(self, val):
+        pack_into(">i", self.data, 36, val)
+    flags = property(get_flags, set_flags, None, """LOD flags: from left to right)
+0 = Use previous slant range
+1 = Reserved
+2 = Freeze center (don't recalculate)
+3-31 = Spare""")
+    
+    def get_centerX(self):
+        (_,) = unpack_from(">d", self.data, 40)
+        return _
+    def set_centerX(self, val):
+        pack_into(">d", self.data, 40, val)
+    center_x = property(get_centerX, set_centerX, None, "LOD center x")
+    
+    def get_centerY(self):
+        (_,) = unpack_from(">d", self.data, 48)
+        return _
+    def set_centerY(self, val):
+        pack_into(">d", self.data, 48, val)
+    center_y = property(get_centerY, set_centerY, None, "LOD center y")
+    
+    def get_centerZ(self):
+        (_,) = unpack_from(">d", self.data, 56)
+        return _
+    def set_centerZ(self, val):
+        pack_into(">d", self.data, 56, val)
+    center_z = property(get_centerZ, set_centerZ, None, "LOD center z")
+    
+    def get_transitionRange(self):
+        (_,) = unpack_from(">d", self.data, 64)
+        return _
+    def set_transitionRange(self, val):
+        pack_into(">d", self.data, 64, val)
+    transition_range = property(get_transitionRange, set_transitionRange, None, "LOD transition range")
+    
+    def get_significantSize(self):
+        (_,) = unpack_from(">d", self.data, 72)
+        return _
+    def set_significantSize(self, val):
+        pack_into(">d", self.data, 72, val)
+    significant_size = property(get_significantSize, set_significantSize, None, "LOD significant size")
 
 class BBox(Record):
     def __init__(self, data):
@@ -823,16 +1047,44 @@ class Switch(Record):
     def __init__(self, data):
         Record.__init__(self, data)
         assert self.opcode == SWITCH_OPCODE
-        self.__load()
-        
-    def __load(self):
-        pass
     
     def __str__(self):
         return '<OpenFlight Switch>'
     
     def __repr__(self):
         return '<OpenFlight Switch>'
+    
+    def get_currentMask(self):
+        (_,) = unpack_from(">i", self.data, 16)
+        return _
+    def set_currentMask(self, val):
+        pack_into(">i", self.data, 16, val)
+    current_mask = property(get_currentMask, set_currentMask, None, "Switch, current mask")
+    
+    def get_maskCount(self):
+        (_,) = unpack_from(">i", self.data, 20)
+        return _
+    def set_maskCount(self, val):
+        pack_into(">i", self.data, 20, val)
+    mask_count = property(get_maskCount, set_maskCount, None, "Switch, number of masks")
+    
+    def get_wordsPerMask(self):
+        (_,) = unpack_from(">i", self.data, 24)
+        return _
+    def set_wordsPerMask(self, val):
+        pack_into(">i", self.data, 24, val)
+    words_per_mask = property(get_wordsPerMask, set_wordsPerMask, None, "Switch, number of 32 bit words required for each mask")
+    
+    def get_maskWords(self):
+        n = self.mask_count * self.words_per_mask
+        fmt = '>' + str(n) + 'i'
+        (_,) = unpack_from(fmt, self.data, 28)
+        return _
+    def set_maskWords(self, val):
+        n = self.mask_count * self.words_per_mask
+        fmt = '>' + str(n) + 'i'
+        pack_into(fmt, self.data, 28, val)
+    mask_words = property(get_maskWords, set_maskWords, None, "Switch, mask words")
         
 class LineStylePalette(Record):
     def __init__(self, data):
@@ -1385,7 +1637,7 @@ class OpenFlightFile:
     
     max children = 65534
     
-    >>> ofile = OpenFlightFile("C:/alienbrainWork/CGI_Archive/DATA/VisualDB/models/3d/lav25/lav25.flt")
+    >>> ofile = OpenFlightFile("C:/box1.flt")
     >>> ofile.header.opcode 
     1
     >>> ofile.header.length
@@ -1450,7 +1702,7 @@ class OpenFlightFile:
                 raise Exception, 'File parse error!'
             data =  _data[_pos:_pos+rec.length]          
             if data:
-                    
+                
                 if rec.opcode == PUSH_LEVEL_OPCODE:
                     if _firstpush:
                         _recstack.append(self)
@@ -1463,7 +1715,7 @@ class OpenFlightFile:
                     
                 else:
                     r = self.createRecord(rec.opcode, data)
-                    
+                    print 'rec:', r
                     if r and isinstance(r, Record):
                         self._current_rec = r
                         r.parent = _recstack[len(_recstack)-1]
@@ -1506,19 +1758,19 @@ class OpenFlightFile:
         #elif opcode == POP_EXTENSION_OPCODE = 20
         #elif opcode == CONTINUATION_OPCODE = 23
         elif opcode == COMMENT_OPCODE:
-            rec = Record(data)
-            frm = '>'+str(rec.length-4)+'s'
-            (cmt,) = unpack_from(frm,data, offset=4)
-            cmt = cmt.replace('\x00',' ').strip()
-            return cmt
+            return Comment(data)
+            #frm = '>'+str(rec.length-4)+'s'
+            #(cmt,) = unpack_from(frm,data, offset=4)
+            #cmt = cmt.replace('\x00',' ').strip()
+            #return cmt
         elif opcode == COLOR_PALETTE_OPCODE:
             return ColorPalette(data)
         elif opcode == LONG_ID_OPCODE:            
-            rec = Record(data)
-            frm = '>'+str(rec.length-4)+'s'
-            (lid,) = unpack_from(frm,data, offset=4)
-            lid = lid.replace('\x00',' ').strip()
-            return lid
+            return LongID(data)
+            #frm = '>'+str(rec.length-4)+'s'
+            #(lid,) = unpack_from(frm,data, offset=4)
+            #lid = lid.replace('\x00',' ').strip()
+            #return lid
         elif opcode == MATRIX_OPCODE:
             return Matrix(data)
         elif opcode == VECTOR_OPCODE:
@@ -1676,5 +1928,5 @@ def _test():
     
 if __name__=='__main__':
     #_test()
-    ofile = OpenFlightFile("c:/box1.flt")
+    ofile = OpenFlightFile("c:/lav25.flt")
     print 'done!'

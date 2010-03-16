@@ -369,18 +369,36 @@ class Alienbrain(object):
                 self.com_nxn.RunCommand ( p, self.com_param.Command, self.com_param.xml )
         return self.com_param.WasSuccessful
         
+    def getProperty(self, sPath, sProperty):
+        """get a named property for the path item
         
+        return '' if the property is empty or not defined on this object"""
+        return self.com_nxn.GetProperty( sPath, sProperty) 
+    
+    def getCustomAttributes(self, sPath):
+        """get the custom attributes on the object"""
+        attribs = []
+        p = self.getProperty(sPath, "_NXN_Attributes_Custom")
+        pa = p.split('|')
+        for i in pa:
+            ia = i.split(',')
+            val = self.getProperty(sPath, ia[0])
+            attribs.append((ia[0],val))
+        return attribs
+    
 if __name__ == "__main__":
-    scInterface = Alienbrain("myUser","myPassword", "myProject")
+    scInterface = Alienbrain( "username", "pswd", "ProjectName", "Server")
     #if not scInterface.getLatest("\\\\Workspace\\myProject\\someFolder\\someFile.txt", "c:\\someLocalPath\\someFile.txt" ):
     #    print "failed to get latest!"
     #if not scInterface.addLabel("\\\\Workspace\\myProject\\someFolder\\someFile.txt", "label_set_by_python_script" ):
     #    print "add label failed!"
     
-    # notice the difference in the path. no workspace/project in the path for this function. needs to be cleaned up in the Alienbrain class to make them all consistent
-    revs = scInterface.getHistory("\\someFolder\\someFile.txt")
-    for rev in revs:
-        print "user:", rev.user, "time:", rev.revTime, "comment:", rev.comment
+    
+    p = scInterface.getCustomAttributes("\\\\Workspace\\ProjectName\\FolderName1\\SubFolder2\\somefile.txt")
+    
+    print "_NXN_Attributes_Custom"
+    for i in p:
+        print "  ", i
     
 
     

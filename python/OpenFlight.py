@@ -173,38 +173,104 @@ class Header(Record):
     def __init__(self, data):
         Record.__init__(self, data)
         assert self.opcode == HEADER_OPCODE
-        self.__load()
-        
-    def __load(self):
+
+    def get_formatRevision(self):
+        (_,) = unpack_from(">i",self.data, offset=12)
+        return _
+    def set_formatRevision(self, val):
+        pack_into(">i", self.data, 12, val)
+    format_revision = property(get_formatRevision, set_formatRevision, None, "Header format revision")
     
-        (self.format_revision,) = unpack_from(">i",self.data, offset=12)
-        (self.edit_revision,) = unpack_from(">i",self.data, offset=16)
-        (self.last_revision,) = unpack_from(">32s",self.data, offset=20)
-        self.last_revision = self.last_revision.replace('\x00',' ').strip()
-        (self.next_group_id,) = unpack_from(">h",self.data, offset=52)
-        (self.next_lod_id,) = unpack_from(">h",self.data, offset=54)
-        (self.next_object_id,) = unpack_from(">h",self.data, offset=56)
-        (self.next_face_id,) = unpack_from(">h",self.data, offset=58)
-        (self.unit_multiplier,) = unpack_from(">h",self.data, offset=60) # this is always 1
+    def get_editRevision(self):
+        (_,) = unpack_from(">i",self.data, offset=16)
+        return _
+    def set_editRevision(self, val):
+        pack_into(">i", self.data, 16, val)
+    edit_revision = property(get_editRevision, set_editRevision, None, "Header edit revision")
+    
+    def get_lastRevision(self):
+        (_,) = unpack_from(">32s",self.data, offset=20)
+        _ = _.replace('\x00',' ').strip()
+        return _
+    def set_lastRevision(self, val):
+        pack_into(">32s", self.data, 16, val)
+    last_revision = property(get_lastRevision, set_lastRevision, None, "Header last revision")
+    
+    def get_next_group_id(self):
+        (_,) = unpack_from(">h",self.data, offset=52)
+        return _
+    def set_next_group_id(self, val):
+        pack_into(">h", self.data, 52, val)
+    next_group_id = property(get_next_group_id, set_next_group_id, None, "Header next group id")
+
+    def get_next_lod_id(self):
+        (_,) = unpack_from(">h",self.data, offset=54)
+        return _
+    def set_next_lod_id(self, val):
+        pack_into(">h", self.data, 54, val)
+    next_lod_id = property(get_next_lod_id, set_next_lod_id, None, "Header next lod id")
+
+    def get_next_object_id(self):
+        (_,) = unpack_from(">h",self.data, offset=56)
+        return _
+    def set_next_object_id(self, val):
+        pack_into(">h", self.data, 56, val)
+    next_object_id = property(get_next_object_id, set_next_object_id, None, "Header next object id")
         
+    def get_next_face_id(self):
+        (_,) = unpack_from(">h",self.data, offset=58)
+        return _
+    def set_next_face_id(self, val):
+        pack_into(">h", self.data, 58, val)
+    next_face_id = property(get_next_face_id, set_next_face_id, None, "Header next face id")
+        
+    def get_unit_multiplier(self):
+        (_,) = unpack_from(">h",self.data, offset=60)
+        return _
+    def set_unit_multiplier(self, val):
+        pack_into(">h", self.data, 60, val)
+    unit_multiplier = property(get_next_lod_id, set_next_lod_id, None, "Header unit multiplier, (this is always 1)")
+
+    def get_coordinate_units(self):
+        (_,) = unpack_from(">b",self.data, offset=62)
+        return _
+    def set_coordinate_units(self, val):
+        pack_into(">b", self.data, 62, val)
+    coordinate_units = property(get_coordinate_units, set_coordinate_units, None, """Header coordinate units
         # 0 = Meters
         # 1 = Kilometers
         # 4 = Feet
         # 5 = Inches
-        # 8 = Nautical miles
-        (self.coordinate_units,) = unpack_from(">b",self.data, offset=62)
-        (self.texwhite,) = unpack_from(">b",self.data, offset=63)
+        # 8 = Nautical miles""")
         
+    def get_texwhite(self):
+        (_,) = unpack_from(">b",self.data, offset=63)
+        return _
+    def set_texwhite(self, val):
+        pack_into(">b", self.data, 63, val)
+    texwhite = property(get_texwhite, set_texwhite, None, "Header texwhite")
+
+    def get_flags(self):
+        (_,) = unpack_from(">i",self.data, offset=64)
+        return _
+    def set_flags(self, val):
+        pack_into(">i", self.data, 64, val)
+    flags = property(get_flags, set_flags, None, """Header texwhite    
         # Flags (bits, from left to right)
         # 0 = Save vertex normals
         # 1 = Packed Color mode
         # 2 = CAD View mode
-        # 3-31 = Spare
-        (self.flags,) = unpack_from(">i",self.data, offset=64)
+        # 3-31 = Spare""")
         
         # 24 bytes are reserved
         # self.reserved = data[68:92]
         
+    def get_projection_type(self):
+        (_,) = unpack_from(">i",self.data, offset=92)
+        return _
+    def set_projection_type(self, val):
+        pack_into(">i", self.data, 92, val)
+    projection_type = property(get_projection_type, set_projection_type, None, """Header projection type  
         # Projection type
         # 0 = Flat earth
         # 1 = Trapezoidal
@@ -212,8 +278,7 @@ class Header(Record):
         # 3 = Lambert
         # 4 = UTM
         # 5 = Geodetic
-        # 6 = Geocentric
-        (self.projection_type,) = unpack_from(">i",self.data, offset=92)
+        # 6 = Geocentric""")
         
         # 28 bytes are reserved
         # self.reserved = data[96:124]
@@ -375,22 +440,56 @@ class Object(Record):
     def __init__(self, data):
         Record.__init__(self, data)
         assert self.opcode == OBJECT_OPCODE
-        self.__load()
-        
-    def __load(self):
-        (self.flags,) = unpack_from(">i",self.data, offset=12)
-        (self.relative_priority,) = unpack_from(">h",self.data, offset=16)
-        (self.transparency,) = unpack_from(">h",self.data, offset=18)
-        (self.special_effect1,) = unpack_from(">h",self.data, offset=20)
-        (self.special_effect2,) = unpack_from(">h",self.data, offset=22)
-        (self.significance,) = unpack_from(">h",self.data, offset=24)
-        (self.reserved,) = unpack_from(">h",self.data, offset=26)
+        assert len(self.data) == 28
         
     def __str__(self):
         return '<OpenFlight Object id:%s>' % (self.id)
     
     def __repr__(self):
         return '<OpenFlight Object id:%s>' % (self.id)
+    
+    def get_flags(self):
+        (_,) = unpack_from(">i", self.data, 12)
+        return _
+    def set_flags(self,val):
+        pack_into(">i", self.data, 12, val)
+    flags = property(get_flags, set_flags, None, "Object flags")
+    
+    def get_relativePriority(self):
+        (_,) = unpack_from(">h", self.data, 16)
+        return _
+    def set_relativePriority(self,val):
+        pack_into(">h", self.data, 16, val)
+    relative_priority = property(get_relativePriority, set_relativePriority, None, "Object relative priority")
+    
+    def get_transparency(self):
+        (_,) = unpack_from(">h", self.data, 18)
+        return _
+    def set_transparency(self,val):
+        pack_into(">h", self.data, 18, val)
+    transparency = property(get_transparency, set_transparency, None, "Object transparency")
+    
+    def get_special_effect1(self):
+        (_,) = unpack_from(">h", self.data, 20)
+        return _
+    def set_special_effect1(self,val):
+        pack_into(">h", self.data, 20, val)
+    special_effect1 = property(get_special_effect1, set_special_effect1, None, "Object special effect 1")
+    
+    def get_special_effect2(self):
+        (_,) = unpack_from(">h", self.data, 22)
+        return _
+    def set_special_effect2(self,val):
+        pack_into(">h", self.data, 22, val)
+    special_effect2 = property(get_special_effect2, set_special_effect2, None, "Object special effect 2")
+    
+    def get_significance(self):
+        (_,) = unpack_from(">h", self.data, 24)
+        return _
+    def set_significance(self,val):
+        pack_into(">h", self.data, 24, val)
+    significance = property(get_significance, set_significance, None, "Object significance")    
+    
         
 class Face(Record):
     def __init__(self, data):

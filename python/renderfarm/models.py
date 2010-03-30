@@ -71,6 +71,7 @@ class WorkerNode(BaseObject):
     
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    mac_address = Column(String)
     
     def __init__(self, name):
         self.name = str(name)

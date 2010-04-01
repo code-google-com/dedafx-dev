@@ -52,9 +52,7 @@ def wake_on_lan(macaddress):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.sendto(send_data, ('<broadcast>', 7))
-    #sock.sendto(send_data, ('<broadcast>', 8081))
     
 
 if __name__ == '__main__':
-
-    wake_on_lan('00-19-D1-A9-33-2C')
+    wake_on_lan('00-AB-CD-EF-33-22')

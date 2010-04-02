@@ -2,7 +2,8 @@ from PyQt4 import QtCore, QtGui, QtOpenGL
 import os, sys
 
 try:
-    from OpenGL import GL, GLU
+    from OpenGL.GL import *
+    from OpenGL.GLU import *
 except ImportError:
     app = QtGui.QApplication(sys.argv)
     QtGui.QMessageBox.critical(None, "OpenGL hellogl",
@@ -47,34 +48,34 @@ class Workpiece(CncObject):
     
     def draw(self):
         """this is a series of opengl draw commands for drawing the object in 3d"""
-        GL.glColor4f(0.15,0.15,0.15,1.0)
+        glColor4f(0.15,0.15,0.15,1.0)
         
-        GL.glBegin(GL.GL_LINE_STRIP)        
-        GL.glVertex3d(self.min.x, self.min.y, self.min.z)
-        GL.glVertex3d(self.min.x, self.max.y, self.min.z)
-        GL.glVertex3d(self.max.x, self.max.y, self.min.z)
-        GL.glVertex3d(self.max.x, self.min.y, self.min.z)
-        GL.glVertex3d(self.min.x, self.min.y, self.min.z)
-        GL.glEnd()
+        glBegin(GL_LINE_STRIP)        
+        glVertex3d(self.min.x, self.min.y, self.min.z)
+        glVertex3d(self.min.x, self.max.y, self.min.z)
+        glVertex3d(self.max.x, self.max.y, self.min.z)
+        glVertex3d(self.max.x, self.min.y, self.min.z)
+        glVertex3d(self.min.x, self.min.y, self.min.z)
+        glEnd()
         
-        GL.glBegin(GL.GL_LINE_STRIP)        
-        GL.glVertex3d(self.min.x, self.min.y, self.max.z)
-        GL.glVertex3d(self.min.x, self.max.y, self.max.z)
-        GL.glVertex3d(self.max.x, self.max.y, self.max.z)
-        GL.glVertex3d(self.max.x, self.min.y, self.max.z)
-        GL.glVertex3d(self.min.x, self.min.y, self.max.z)
-        GL.glEnd()
+        glBegin(GL_LINE_STRIP)        
+        glVertex3d(self.min.x, self.min.y, self.max.z)
+        glVertex3d(self.min.x, self.max.y, self.max.z)
+        glVertex3d(self.max.x, self.max.y, self.max.z)
+        glVertex3d(self.max.x, self.min.y, self.max.z)
+        glVertex3d(self.min.x, self.min.y, self.max.z)
+        glEnd()
         
-        GL.glBegin(GL.GL_LINES)        
-        GL.glVertex3d(self.min.x, self.min.y, self.min.z)
-        GL.glVertex3d(self.min.x, self.min.y, self.max.z)        
-        GL.glVertex3d(self.min.x, self.max.y, self.min.z)
-        GL.glVertex3d(self.min.x, self.max.y, self.max.z)        
-        GL.glVertex3d(self.max.x, self.max.y, self.min.z)
-        GL.glVertex3d(self.max.x, self.max.y, self.max.z)        
-        GL.glVertex3d(self.max.x, self.min.y, self.min.z)
-        GL.glVertex3d(self.max.x, self.min.y, self.max.z)        
-        GL.glEnd()
+        glBegin(GL_LINES)        
+        glVertex3d(self.min.x, self.min.y, self.min.z)
+        glVertex3d(self.min.x, self.min.y, self.max.z)        
+        glVertex3d(self.min.x, self.max.y, self.min.z)
+        glVertex3d(self.min.x, self.max.y, self.max.z)        
+        glVertex3d(self.max.x, self.max.y, self.min.z)
+        glVertex3d(self.max.x, self.max.y, self.max.z)        
+        glVertex3d(self.max.x, self.min.y, self.min.z)
+        glVertex3d(self.max.x, self.min.y, self.max.z)        
+        glEnd()
         
 class Tool:
     
@@ -144,10 +145,10 @@ class Line(CncObject):
             return ("G01 X{:.4f} YX{:.4f}".format(self.p1.x, self.p1.y))
         
     def draw(self):
-        GL.glBegin(GL.GL_LINES)
-        GL.glVertex3d(self.p1.x, self.p1.y, self.p1.z)
-        GL.glVertex3d(self.p2.x, self.p2.y, self.p2.z)
-        GL.glEnd()
+        glBegin(GL_LINES)
+        glVertex3d(self.p1.x, self.p1.y, self.p1.z)
+        glVertex3d(self.p2.x, self.p2.y, self.p2.z)
+        glEnd()
         
 class LineStrip(CncObject):
     
@@ -160,13 +161,13 @@ class LineStrip(CncObject):
         return ""
     
     def draw(self):
-        GL.glBegin(GL.GL_LINE_STRIP)
+        glBegin(GL_LINE_STRIP)
         for pt in self.points:
-            GL.glVertex3d(pt.x, pt.y, pt.z)
+            glVertex3d(pt.x, pt.y, pt.z)
         if self.closed and len(self.points) > 0:
             pt = self.points[0]
-            GL.glVertex3d(pt.x, pt.y, pt.z)
-        GL.glEnd()
+            glVertex3d(pt.x, pt.y, pt.z)
+        glEnd()
         
 class Arc(CncObject):
     
@@ -191,20 +192,20 @@ class Arc(CncObject):
             return ("G01 X{:.4f} YX{:.4f}".format(self.startpoint.x, self.startpoint.y))
         
     def draw(self):
-        GL.glStart(GL.GL_LINE_STRIP)
+        glStart(GL_LINE_STRIP)
         if self.startpoint.z != None:
-            GL.glVertex3d(self.startpoint.x, self.startpoint.y, self.startpoint.z)
+            glVertex3d(self.startpoint.x, self.startpoint.y, self.startpoint.z)
         else:
-            GL.glVertex3d(self.startpoint.x, self.startpoint.y, 0.0)
+            glVertex3d(self.startpoint.x, self.startpoint.y, 0.0)
             
         # TODO!
         
         if self.startpoint.z != None: #use startpoint z, because this should be a 2d arc on the xy plane!
-            GL.glVertex3d(self.endpoint.x, self.endpoint.y, self.startpoint.z)
+            glVertex3d(self.endpoint.x, self.endpoint.y, self.startpoint.z)
         else:
-            GL.glVertex3d(self.endpoint.x, self.endpoint.y, 0.0)
+            glVertex3d(self.endpoint.x, self.endpoint.y, 0.0)
             
-        GL.glEnd()
+        glEnd()
         
 class Contour(CncObject):
     """This is just a collection of lines, arcs, and lineStrips"""

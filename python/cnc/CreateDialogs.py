@@ -9,6 +9,7 @@ class LineDialog(QtGui.QDialog):
         self.setWindowTitle("Line Creator")
         self.resize(300,350)
         self.setModal(True)
+        self.setFixedSize(300,350)
         
         btns = QtGui.QDialogButtonBox( QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel, QtCore.Qt.Horizontal, self)
         self.connect(btns, QtCore.SIGNAL("accepted()"), self.accept)
@@ -31,6 +32,7 @@ class ArcDialog(QtGui.QDialog):
         self.setWindowTitle("Arc Creator")
         self.resize(300,350)
         self.setModal(True)
+        self.setFixedSize(300,350)
         
         btns = QtGui.QDialogButtonBox( QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel, QtCore.Qt.Horizontal, self)
         self.connect(btns, QtCore.SIGNAL("accepted()"), self.accept)
@@ -52,6 +54,7 @@ class ContourDialog(QtGui.QDialog):
         self.setWindowTitle("Contour Creator")
         self.resize(300,350)
         self.setModal(True)
+        self.setFixedSize(300,350)
         
         btns = QtGui.QDialogButtonBox( QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel, QtCore.Qt.Horizontal, self)
         self.connect(btns, QtCore.SIGNAL("accepted()"), self.accept)

@@ -89,7 +89,7 @@ class Alienbrain(object):
         self.com_param.SetParamIn("Username", sUsername)
         self.com_param.SetParamIn("Password", sPswd)
                 
-        self.com_nxn.RunCommand ( "\\\\Workspace\\"+ self.project+"\\", self.com_param.Command, self.com_param.xml )
+        self.com_nxn.RunCommand ( self.__getWorkspacePath(), self.com_param.Command, self.com_param.xml )
         if ( self.com_param.WasSuccessful ):
             pass
             #print "SUCCESS: Project loaded"
@@ -103,7 +103,7 @@ class Alienbrain(object):
                 self.com_param.Reset()
                 self.com_param.Command = "ProjectUnloadEx"
                 self.com_param.SetParamIn("Name", self.project)
-                self.com_nxn.RunCommand ( "\\\\Workspace\\"+ self.project + "\\", self.com_param.Command, self.com_param.xml )
+                self.com_nxn.RunCommand ( self.__getWorkspacePath(), self.com_param.Command, self.com_param.xml )
                # if self.com_param.WasSuccessful:
                #     print "Alienbrain project unloaded."
                # else:
@@ -112,9 +112,23 @@ class Alienbrain(object):
             # self.com_param or self.com_nxn is not defined
             pass
         
+    def __getWorkspacePath(self, sPath="", bDir=False):
+        sPath = sPath.replace("/","\\")
+        if ( sPath.startswith("\\\\Workspace\\" + self.project + "\\") ):
+            return sPath        
+        while ( sPath.startswith("\\") ):
+            sPath = sPath[1:]
+        while ( sPath.endswith("\\") ):
+            sPath = sPath[:-1]
+        ret = "\\\\Workspace\\" + self.project + "\\" + sPath
+        if bDir:
+            ret += "\\"
+        return ret
+        
           
     def getFilesOfType(self, sExt, sParentPath, recursive=True ):
         files = []
+        sParentPath = self.__getWorkspacePath(sParentPath)
         sObjectPath = self.com_nxn.GetFirstChild(sParentPath)
         while sObjectPath != "":
             sPath = sParentPath + "\\" + sObjectPath
@@ -211,7 +225,7 @@ class Alienbrain(object):
     def getFolderList(self, sParentFolder):
         """get a list of folders contained in the parent directory"""
         folderList = []
-        sParentPath = "\\\\Workspace\\" + self.project + "\\" + sParentFolder + "\\"
+        sParentPath = self.__getWorkspacePath(sParentFolder)
         sObjectPath = self.com_nxn.GetFirstChild(sParentPath)
         sObjectType = ""
         while (sObjectPath != ""):
@@ -227,7 +241,8 @@ class Alienbrain(object):
         
        
     def hasOriginalFiles(self, sParentPath, recursive=True):
-        """check to see if any of the contained files are not shares, and return tru or false"""
+        """check to see if any of the contained files are not shares, and return true or false"""
+        sParentPath = self.__getWorkspacePath(sParentPath)
         sObjectPath = self.com_nxn.GetFirstChild(sParentPath)
         ret = False
         while (sObjectPath != ""):
@@ -258,6 +273,7 @@ class Alienbrain(object):
             sObjectPath = self.com_nxn.GetNextChild(sSourceDir, sObjectPath);
         
     def checkOut(self, sPath):
+        sPath = self.__getWorkspacePath(sPath)
         self.com_param.Reset()
         self.com_param.Command = "CheckOut"
         self.com_param.SetParamIn("ShowDialog", "0")
@@ -266,6 +282,7 @@ class Alienbrain(object):
         return self.com_param.WasSuccessful
         
     def getLatest(self, sPath, sTargetPath):
+        sPath = self.__getWorkspacePath(sPath)
         self.com_param.Reset()
         self.com_param.Command = "GetLatest"
         self.com_param.SetParamIn("ShowDialog", "0")
@@ -283,11 +300,7 @@ class Alienbrain(object):
         if( sLabel == None or sPath == None ):
             return False
             
-        sPath = sPath.replace("/","\\")
-        if ( sPath.startswith("\\") ):
-            sPath = sPath[1:]
-                        
-        sPath = "\\\\Workspace\\" + self.project+"\\" + sPath
+        sPath = self.__getWorkspacePath(sPath)
         sPath = self.getShareSource(sPath)
         self.com_param.Reset()
         self.com_param.Command = "VC_AddLabel"
@@ -299,11 +312,7 @@ class Alienbrain(object):
         return self.com_param.WasSuccessful
         
     def hasLabel(self, sPath, sLabel):
-        sPath = sPath.replace("/","\\")
-        if ( sPath.startswith("\\") ):
-            sPath = sPath[1:]
-                
-        sPath = "\\\\Workspace\\" + self.project+"\\" + sPath
+        sPath = self.__getWorkspacePath(sPath)
         sPath = self.getShareSource(sPath)
         sHistory = sPath+"\\History"
         sChild = self.com_nxn.GetFirstChild(sHistory)
@@ -319,11 +328,7 @@ class Alienbrain(object):
         return False
         
     def getHistory(self, sPath):
-        sPath = sPath.replace("/","\\")
-        if ( sPath.startswith("\\") ):
-            sPath = sPath[1:]
-        
-        sPath = "\\\\Workspace\\" + self.project+"\\" + sPath
+        sPath = self.__getWorkspacePath(sPath)
         sPath = self.getShareSource(sPath)
         sHistory = sPath + "\\History"
         sChild = self.com_nxn.GetFirstChild(sHistory)
@@ -340,14 +345,15 @@ class Alienbrain(object):
         return hist
         
     def getVersionNumber(self, sPath):
-        return self.com_nxn.GetProperty( "\\\\Workspace\\"+ self.project+"\\" + sPath, "NxN_VersionNumber")
+        return self.com_nxn.GetProperty( self.__getWorkspacePath(sPath), "NxN_VersionNumber")
         
     def getComment(self, sPath):
-        return self.com_nxn.GetProperty( "\\\\Workspace\\"+ self.project+"\\" + sPath, "VersionControl_Comment")
+        return self.com_nxn.GetProperty( self.__getWorkspacePath(sPath), "VersionControl_Comment")
         
     def getVersion(self, sPath, sLabel, sTargetPath):
         """label and targetpath are required, and targetpath must be a dir and end with a backslash"""
-        # if sPAth is a directory, recursively get a file list to operate on individually
+        # if sPath is a directory, recursively get a file list to operate on individually
+        sPath = self.__getWorkspacePath(sPath)
         files = []
         if ( self.isItemFolder(sPath) ):
             files.extend( self.getFiles(sPath) )
@@ -373,25 +379,35 @@ class Alienbrain(object):
         """get a named property for the path item
         
         return '' if the property is empty or not defined on this object"""
-        return self.com_nxn.GetProperty( sPath, sProperty) 
+        return self.com_nxn.GetProperty( self.__getWorkspacePath(sPath), sProperty) 
     
     def getCustomAttributes(self, sPath):
         """get the custom attributes on the object"""
         attribs = []
+        sPath = self.__getWorkspacePath(sPath)
         p = self.getProperty(sPath, "_NXN_Attributes_Custom")
         pa = p.split('|')
         for i in pa:
             ia = i.split(',')
             val = self.getProperty(sPath, ia[0])
-            attribs.append((ia[0],val))
+            attribs.append((ia,val))
         return attribs
+    
+def getCatalogImages(alienbrain, rootdir):        
+    files = ab.getFilesOfType('.jpg', rootdir)
+    catfiles = []
+    for f in files:
+        s = '_cat.jpg'
+        if f.find(s) == (len(f) - len(s)):
+            catfiles.append(f)
+    return catfiles
     
 if __name__ == "__main__":
     scInterface = Alienbrain( "username", "pswd", "ProjectName", "Server")
-    #if not scInterface.getLatest("\\\\Workspace\\myProject\\someFolder\\someFile.txt", "c:\\someLocalPath\\someFile.txt" ):
-    #    print "failed to get latest!"
-    #if not scInterface.addLabel("\\\\Workspace\\myProject\\someFolder\\someFile.txt", "label_set_by_python_script" ):
-    #    print "add label failed!"
+    if not scInterface.getLatest("\\\\Workspace\\myProject\\someFolder\\someFile.txt", "c:\\someLocalPath\\someFile.txt" ):
+        print "failed to get latest!"
+    if not scInterface.addLabel("\\\\Workspace\\myProject\\someFolder\\someFile.txt", "label_set_by_python_script" ):
+        print "add label failed!"
     
     
     p = scInterface.getCustomAttributes("\\\\Workspace\\ProjectName\\FolderName1\\SubFolder2\\somefile.txt")
@@ -400,5 +416,9 @@ if __name__ == "__main__":
     for i in p:
         print "  ", i
     
+    
+        
+
+            
 
     

@@ -270,7 +270,7 @@ class Header(Record):
         return _
     def set_projection_type(self, val):
         pack_into(">i", self.data, 92, val)
-    projection_type = property(get_projection_type, set_projection_type, None, """Header projection type  
+        projection_type = property(get_projection_type, set_projection_type, None, """Header projection type  
         # Projection type
         # 0 = Flat earth
         # 1 = Trapezoidal

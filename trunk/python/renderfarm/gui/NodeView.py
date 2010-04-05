@@ -2,35 +2,45 @@
 
 import sys, operator
 from PyQt4 import QtGui, QtCore
+from renderfarm.WakeOnLan import wake_on_lan
+from renderfarm.FarmManager import NodeCache
+from renderfarm.models import WorkerNode
 
 class NodeTableView(QtGui.QTableView):
     def __init__(self, *args):
         QtGui.QTableView.__init__(self, *args)
         
+        self.nodeCache = NodeCache()
+        
+        # temp data, should query the local db cache
+        #self._data = self.nodeCache.nodes
         self._data = [
-            ['joe-renderer',10, '192.168.0.101','00abcdef3322','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.102','00abcdef3323','busy','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.103','00abcdef3324','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.101','00abcdef3322','busy','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.102','00abcdef3323','offline','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.103','00abcdef3324','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.101','00abcdef3322','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.102','00abcdef3323','busy','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.103','00abcdef3324','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.101','00abcdef3322','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.102','00abcdef3323','waiting','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.103','00abcdef3324','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.101','00abcdef3322','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.102','00abcdef3323','busy','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.103','00abcdef3324','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.101','00abcdef3322','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.102','00abcdef3323','waiting','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.103','00abcdef3324','offline','linux32','','1.0.0','2','1',''],
+            ['joe-renderer',10, '192.168.0.101','00abcdef3321','waiting','win64','','1.0.0','2','1',''],
+            ['bob-renderer',10, '192.168.0.102','00abcdef3322','busy','linux64','','1.0.0','2','1',''],
+            ['sam-renderer',10, '192.168.0.103','00abcdef3323','offline','linux32','','1.0.0','2','1',''],
+            ['joe-renderer',10, '192.168.0.104','00abcdef3324','busy','win64','','1.0.0','2','1',''],
+            ['bob-renderer',10, '192.168.0.105','00abcdef3325','offline','linux64','','1.0.0','2','1',''],
+            ['sam-renderer',10, '192.168.0.106','00abcdef3326','offline','linux32','','1.0.0','2','1',''],
+            ['joe-renderer',10, '192.168.0.107','00abcdef3327','waiting','win64','','1.0.0','2','1',''],
+            ['bob-renderer',10, '192.168.0.108','00abcdef3328','busy','linux64','','1.0.0','2','1',''],
+            ['sam-renderer',10, '192.168.0.109','00abcdef3329','offline','linux32','','1.0.0','2','1',''],
+            ['joe-renderer',10, '192.168.0.110','00abcdef332a','waiting','win64','','1.0.0','2','1',''],
+            ['bob-renderer',10, '192.168.0.111','00abcdef332b','waiting','linux64','','1.0.0','2','1',''],
+            ['sam-renderer',10, '192.168.0.112','00abcdef332c','offline','linux32','','1.0.0','2','1',''],
+            ['joe-renderer',10, '192.168.0.113','00abcdef332d','waiting','win64','','1.0.0','2','1',''],
+            ['bob-renderer',10, '192.168.0.114','00abcdef332e','busy','linux64','','1.0.0','2','1',''],
+            ['sam-renderer',10, '192.168.0.115','00abcdef332f','offline','linux32','','1.0.0','2','1',''],
+            ['joe-renderer',10, '192.168.0.116','00abcdef3330','waiting','win64','','1.0.0','2','1',''],
+            ['bob-renderer',10, '192.168.0.117','00abcdef3331','waiting','linux64','','1.0.0','2','1',''],
+            ['sam-renderer',10, '192.168.0.118','00abcdef3332','offline','linux32','','1.0.0','2','1',''],
                  ]
         self._headers = ['name', 'id', 'ip address', 'mac address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']
+        #self._headers = []
+        #for attr in dir(WorkerNode):
+        #    if attr.find('_') != 0 and attr.find('metadata') != 0:
+        #        self._headers.append(attr)            
         
-        self.dataModel = NodeTableModel(self._data, self._headers, self)
-        
+        self.dataModel = NodeTableModel(self._data, self._headers, self)        
         self.setModel(self.dataModel)
         
         self.resizeColumnsToContents()
@@ -53,14 +63,51 @@ class NodeTableView(QtGui.QTableView):
         if not idx.isValid():
             return
 
-        item = self.itemAt(idx)
-        name = item.text(0)
+        idxs = self.selectedIndexes()
+        print idxs
+        
+        mac_addresses = []
+        machineIds = []
+        
+        for i in idxs:
+            # to support multi-select starting, need to make this an array of all selected and offline machines
+            mac_address = idx.sibling(i.row(), 3).data().toString()
+            status = idx.sibling(i.row(), 4).data().toString()
+            if status == 'offline':
+                mac_addresses.append(mac_address)
+        
+        if len(mac_addresses) > 0:
+            menu = QtGui.QMenu(self)
+            lbl = 'Start Machine'
+            lbl2 = "Remove Machine"
+            if len(mac_addresses) > 1:
+                lbl += 's'
+                lbl2 += 's'
+                
+            start_machine = QtGui.QAction(lbl, self)
+            menu.addAction(start_machine)            
+            startMach = lambda: self.startMachines(mac_addresses)            
+            self.connect(start_machine, QtCore.SIGNAL('triggered()'), startMach)      
+            
+            remove_machine = QtGui.QAction(lbl2, self)
+            menu.addAction(remove_machine)            
+            removeMach = lambda: self.removeMachines(mac_addresses)
+            self.connect(remove_machine, QtCore.SIGNAL('triggered()'), removeMach)
+            
+            menu.popup(QtGui.QCursor.pos()) 
+            
+    def startMachines(self, macAddresses):
+        for machine in macAddresses:
+            print 'starting machine', str(machine)
+            wake_on_lan(str(machine))
+            
+    def removeMachines(self, macAddresses):
+        pass
 
-        menu = QtGui.QMenu(self)
-
-        menu.addAction('start machine')
-
-        menu.popup(QtGui.QCursor.pos()) 
+    def getCachedData(self):
+        nodes = []
+        
+        return nodes
 
 class NodeTableModel(QtCore.QAbstractTableModel):
     def __init__(self, datain, headerdata, parent=None, *args): 
@@ -75,7 +122,10 @@ class NodeTableModel(QtCore.QAbstractTableModel):
         return len(self.arraydata) 
  
     def columnCount(self, parent): 
-        return len(self.arraydata[0]) 
+        if self.arraydata and len(self.arraydata) > 0:
+            return len(self.arraydata[0]) 
+        else:
+            return 0
  
     def data(self, index, role): 
         if not index.isValid(): 
@@ -176,5 +226,6 @@ if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv) 
     w = NodeTableView() 
     w.setWindowTitle('Vinyard :: Node View')
+    w.setWindowIcon(QtGui.QIcon('grapes.png'))
     w.show() 
     sys.exit(app.exec_()) 

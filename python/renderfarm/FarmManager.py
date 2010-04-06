@@ -1,4 +1,4 @@
-import threading, time, socket, struct
+import threading, time, socket, struct, os, sys
 from renderfarm.models import Session, WorkerNode
 from Queue import Queue
 
@@ -22,7 +22,9 @@ def createPacket(opcode, size, data):
 
 
 class HeartbeatThread(threading.Thread):
-    """Broadcast a heartbeat packet on specified port"""
+    """Broadcast a heartbeat packet on specified port.
+    
+    This is used by the windows service or daemon process, and is used to autodiscover running nodes."""
     
     def run(self):
         running = True
@@ -36,15 +38,13 @@ class HeartbeatThread(threading.Thread):
         s.bind(("", 0))
             
         while running:
-            time.sleep(5)
-            
-            # broadcast magic packet on port
-            
+            time.sleep(5)            
+            # broadcast magic packet on port            
             s.sendto("DEDAFX-NODE", (host, AUTODISCOVERY_PORT))
 
-            n += 1
-            if n > 5:
-                running = False
+            #n += 1
+            #if n > 5:
+            #    running = False
                 
         print "done!"
     
@@ -86,32 +86,44 @@ class AutodiscoveryServerThread(threading.Thread):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.bind(("", AUTODISCOVERY_PORT))
         print "autodiscovery waiting on port:", AUTODISCOVERY_PORT
-        known_addresses = [] # should be filled from info in the db, if available
+        self.known_addrs = []
+        self.updateKnownAddrs()
         while 1:
             data, addr = s.recvfrom(1024)
             if data == 'DEDAFX-NODE':
                 # filter out known addresses
-                if addr in known_addresses:
+                if addr in self.known_addrs:
                     continue
                 else:
                     print addr, ' ', data
-                    known_addresses.append(addr)
                     __nodeQueue.put(addr)
-            
-class NodeQueueProcessingThread(threading.Thread):
-    
-    def run(self):
-        """process the queue, if it has any items in it"""
-        session = Session()
-        while 1:
-            if not __nodeQueue.empty():
-                addr = __nodeQueue.get()
-                if session.query(WorkerNode).filter_by(ip_address=addr).first() != None:
-                    newNode = WorkerNode()
-                    newNode.ip_address = addr
                     
-                    session.add(addr)
-                    session.commit()
+            time.sleep(1)
+            self.updateKnownAddrs()
+                    
+                    
+    def updateKnownAddrs(self):
+        session = Session()
+        for node in session.query(WorkerNode):
+            if node in self.known_addrs:
+                continue
+            else:
+                self.known_addrs.append(node.ip_address)
+            
+#class NodeQueueProcessingThread(threading.Thread):
+    
+def processNodeQueue():
+    """process the queue, if it has any items in it"""
+    session = Session()
+    while 1:
+        if not __nodeQueue.empty():
+            addr = __nodeQueue.get()
+            if session.query(WorkerNode).filter_by(ip_address=addr).first() != None:
+                newNode = WorkerNode()
+                newNode.ip_address = addr
+                    
+                session.add(addr)
+                session.commit()
                 
 class NodeCache(object): 
     
@@ -125,10 +137,12 @@ class NodeCache(object):
         self.session = Session()
         
         try:
-            for instance in self.session.query(WorkerNode).order_by(WorkerNode.id): 
-                print instance.name, instance.fullname
+            for i in self.session.query(WorkerNode).order_by(WorkerNode.id): 
+                i.status = 'offline' # until we verify that it is online
+                self.nodes.append([i.id, i.name, i.mac_address, i.ip_address, i.status, i.platform, i.pools, i.version, i.cpus, i.priority, i.engines])
+            self.session.commit() # status changes to offline
         except Exception, e:
-            pass
+            print e
         
         
         self.initializeLocalNodeCache()
@@ -140,15 +154,94 @@ class NodeCache(object):
         
         Store the node information in the local sqlite database."""        
         
-        # broadcast magic packet on AUTODISCOVERY_PORT
-        # get all responses over a few seconds (3s or less), store in local array
-        # query each node for their node cache and store/verify local cache        
+        # start the autodiscover and node queue update threads
+        #nq = NodeQueueProcessingThread()
         
-        pass
+        #nq = threading.Thread(target=processNodeQueue)
+        #nq.setName('Vinyard_nodeQueueProcessing') 
+        #nq.start()
+        
+        #autodisc = AutodiscoveryServerThread()
+        #autodisc.setName('Vinyard_autodiscoveryClient')        
+        #autodisc.start()
+        
+    def removeMachine(self, macAddress):
+        """ remove a single machine from the memory array and the db """
+        for i in range(len(self.nodes)):
+            if macAddress in self.nodes[i]:
+                n = self.nodes[i]
+                
+                dbn = self.session.query(WorkerNode).filter_by(mac_address=macAddress).first()
+                print dbn
+                
+                self.session.delete( dbn )
+                self.session.commit()
+                
+                self.nodes.remove(n)                
+                return
+                
+            
+
+class WorkerNodeDaemon(object):
+    """the main worker node daemon class
+    
+    This can be run as a daemonized process or in a windows service"""
+    
+    def __init__(self, autodiscover=True):
+        if os.name == 'posix':
+            pass
+        elif os.name == 'nt':
+            pass
+    
+            
+def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+    if os.name != 'posix':
+        print "this only works in nix environments!"
+        sys.exit(-1)
+    
+    # Do first fork.
+    try:
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0) # Exit first parent.
+    except OSError, e:
+        sys.stderr.write ("fork #1 failed: (%d) %s\n" % (e.errno, e.strerror)    )
+        sys.exit(1)
+
+    # Decouple from parent environment.
+    os.chdir("/")
+    os.umask(0)
+    os.setsid()
+
+    # Do second fork.
+    try:
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0) # Exit second parent.
+    except OSError, e:
+        sys.stderr.write ("fork #2 failed: (%d) %s\n" % (e.errno, e.strerror)    )
+        sys.exit(1)
+
+    # Now I am a daemon!
+
+    # Redirect standard file descriptors.
+    si = file(stdin, 'r')
+    so = file(stdout, 'a+')
+    se = file(stderr, 'a+', 0)
+    os.dup2(si.fileno(), sys.stdin.fileno())
+    os.dup2(so.fileno(), sys.stdout.fileno())
+    os.dup2(se.fileno(), sys.stderr.fileno())
 
 
 if __name__ == '__main__':
-    machine = ''
+    
+    if os.name == 'posix':
+        daemonize('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
+        # do the main loop for the worker node
+        #main()
+    elif os.name == 'nt':
+        import WorkerNodeService
+
     #c = wmi.WMI()
     
     #for disk in c.Win32_LogicalDisk (DriveType=3):

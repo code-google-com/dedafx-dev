@@ -20,7 +20,7 @@ if os.name == 'nt':
     import win32netcon
     
 # this should refer to a centralized database for a large farm, configured at install time
-engine = create_engine('sqlite:///vinyard.db', echo=True)
+engine = create_engine('sqlite:///c:/vinyard.db', echo=True)
 
 
 Session = sessionmaker(bind=engine)
@@ -100,7 +100,7 @@ class Job(BaseObject):
     progress = Column(String)
     
     status = Column(String)
-    tasks = relation('Task', secondary=job_tasks_table, backref='job')
+    tasks = relation('Task', secondary=job_tasks_table, backref='job', cascade="all, delete, delete-orphan")
     pool = Column(String)
     engine = Column(String)
     
@@ -247,12 +247,55 @@ def test(args):
     
 def install(args):
     print "installing the database..."
+    session = Session()
+    metadata.create_all(engine)
+    if args == 'WorkerNodes':
+        print "\tinstalling WorkerNodes"
+        
+        _data = [
+            [u'joe-renderer',10, '192.168.0.101','00abcdef3321','waiting','win64','','1.0.0','2','1',''],
+            [u'bob-renderer',11, '192.168.0.102','00abcdef3322','busy','linux64','','1.0.0','2','1',''],
+            [u'sam-renderer',12, '192.168.0.103','00abcdef3323','offline','linux32','','1.0.0','2','1',''],
+            [u'joe-renderer2',13, '192.168.0.104','00abcdef3324','busy','win64','','1.0.0','2','1',''],
+            [u'bob-renderer2',14, '192.168.0.105','00abcdef3325','offline','linux64','','1.0.0','2','1',''],
+            [u'sam-renderer2',15, '192.168.0.106','00abcdef3326','offline','linux32','','1.0.0','2','1',''],
+            [u'joe-renderer3',16, '192.168.0.107','00abcdef3327','waiting','win64','','1.0.0','2','1',''],
+            [u'bob-renderer3',17, '192.168.0.108','00abcdef3328','busy','linux64','','1.0.0','2','1',''],
+            [u'sam-renderer3',18, '192.168.0.109','00abcdef3329','offline','linux32','','1.0.0','2','1',''],
+            [u'joe-renderer4',19, '192.168.0.110','00abcdef332a','waiting','win64','','1.0.0','2','1',''],
+            [u'bob-renderer4',20, '192.168.0.111','00abcdef332b','waiting','linux64','','1.0.0','2','1',''],
+            [u'sam-renderer4',21, '192.168.0.112','00abcdef332c','offline','linux32','','1.0.0','2','1',''],
+            [u'joe-renderer5',22, '192.168.0.113','00abcdef332d','waiting','win64','','1.0.0','2','1',''],
+            [u'bob-renderer5',23, '192.168.0.114','00abcdef332e','busy','linux64','','1.0.0','2','1',''],
+            [u'sam-renderer5',24, '192.168.0.115','00abcdef332f','offline','linux32','','1.0.0','2','1',''],
+            [u'joe-renderer6',25, '192.168.0.116','00abcdef3330','waiting','win64','','1.0.0','2','1',''],
+            [u'bob-renderer6',26, '192.168.0.117','00abcdef3331','waiting','linux64','','1.0.0','2','1',''],
+            [u'sam-renderer6',27, '192.168.0.118','00abcdef3332','offline','linux32','','1.0.0','2','1',''],
+                 ]
+        
+        for n in _data:
+            node = WorkerNode(id = n[1],
+                              name = n[0],
+                              mac_address = n[3],
+                              ip_address = n[2],
+                              status = n[4],
+                              platform = n[5],
+                              pools = n[6],
+                              version = n[7],
+                              cpus = n[8],
+                              priority = n[9],
+                              engines = n[10] )
+            session.add(node)
+
+         
+    session.commit()
+        
     
 if __name__ == '__main__':    
     import getopt, sys
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "it", ["install", "test"])
+        opts, args = getopt.getopt(sys.argv[1:], "t:i:", ["test", "install"])
     except getopt.GetoptError, err:
         print str(err)
         sys.exit(2)
@@ -266,7 +309,7 @@ if __name__ == '__main__':
             assert False, "unhandled option!"
 
     
-    session = Session()
+    
     
     # create the permissions
     # create default groups

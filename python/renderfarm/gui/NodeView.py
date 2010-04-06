@@ -5,42 +5,77 @@ from PyQt4 import QtGui, QtCore
 from renderfarm.WakeOnLan import wake_on_lan
 from renderfarm.FarmManager import NodeCache
 from renderfarm.models import WorkerNode
+from renderfarm.gui.Validators import IPAddressValidator, MACAddressValidator
+
+class AddNodeDialog(QtGui.QDialog):
+    def __init__(self, *args):
+        QtGui.QDialog.__init__(self, *args)
+        
+        vbox = QtGui.QVBoxLayout(self)
+        self.center()
+        self.setWindowTitle('Add Node')
+        self.setWindowIcon(QtGui.QIcon('grapes.png'))
+        
+        grid = QtGui.QGridLayout()
+        nameLabel = QtGui.QLabel("Name", self)
+        nameField = QtGui.QLineEdit(self)
+        grid.addWidget(nameLabel, 0, 0, QtCore.Qt.AlignRight)
+        grid.addWidget(nameField, 0, 1)
+        
+        ipregex = QtCore.QRegExp("\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b")
+        ipvalidator = QtGui.QRegExpValidator(ipregex, self)
+
+        ipLabel = QtGui.QLabel("IP Address", self)
+        ipField = QtGui.QLineEdit(self)
+        grid.addWidget(ipLabel, 1, 0, QtCore.Qt.AlignRight)
+        grid.addWidget(ipField, 1, 1)
+        
+        macregex = QtCore.QRegExp("[0-9a-f]{2}[:-][0-9a-f]{2}[:-][0-9a-f]{2}[:-][0-9a-f]{2}[:-][0-9a-f]{2}[:-][0-9a-f]{2}")
+        macvalidator = QtGui.QRegExpValidator(macregex, self)
+        
+        macLabel = QtGui.QLabel("MAC Address", self)
+        macField = QtGui.QLineEdit(self)
+        grid.addWidget(macLabel, 2, 0, QtCore.Qt.AlignRight)
+        grid.addWidget(macField, 2, 1)
+        vbox.addLayout(grid)
+        
+        okCancel = QtGui.QDialogButtonBox(self)
+        okCancel.setOrientation(QtCore.Qt.Horizontal)
+        okCancel.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
+        
+        okbtn = okCancel.button(QtGui.QDialogButtonBox.Ok)
+        okbtn.setDisabled(True)
+        
+        vbox.addStretch(1)
+        vbox.addWidget(okCancel)
+        
+        self.setLayout(vbox)
+        
+        self.connect(okCancel,  QtCore.SIGNAL('accepted()'), self.addNode )
+        self.connect(okCancel,  QtCore.SIGNAL('rejected()'), self, QtCore.SLOT('close()') )
+        
+    def center(self):
+        screen = QtGui.QDesktopWidget().screenGeometry()
+        size =  self.geometry()
+        self.move((screen.width()-size.width())/2, (screen.height()-size.height())/2)
+        
+    def addNode(self):
+        print 'changes applied'
+        self.close()
+        
+
+class NodeView(QtGui.QWidget):
+    def __init__(self, *args):
+        QtGui.QWidget.__init__(self, *args)
 
 class NodeTableView(QtGui.QTableView):
     def __init__(self, *args):
         QtGui.QTableView.__init__(self, *args)
         
         self.nodeCache = NodeCache()
+        self._headers = ['id', 'name', 'mac address', 'ip address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']          
         
-        # temp data, should query the local db cache
-        #self._data = self.nodeCache.nodes
-        self._data = [
-            ['joe-renderer',10, '192.168.0.101','00abcdef3321','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.102','00abcdef3322','busy','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.103','00abcdef3323','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.104','00abcdef3324','busy','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.105','00abcdef3325','offline','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.106','00abcdef3326','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.107','00abcdef3327','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.108','00abcdef3328','busy','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.109','00abcdef3329','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.110','00abcdef332a','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.111','00abcdef332b','waiting','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.112','00abcdef332c','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.113','00abcdef332d','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.114','00abcdef332e','busy','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.115','00abcdef332f','offline','linux32','','1.0.0','2','1',''],
-            ['joe-renderer',10, '192.168.0.116','00abcdef3330','waiting','win64','','1.0.0','2','1',''],
-            ['bob-renderer',10, '192.168.0.117','00abcdef3331','waiting','linux64','','1.0.0','2','1',''],
-            ['sam-renderer',10, '192.168.0.118','00abcdef3332','offline','linux32','','1.0.0','2','1',''],
-                 ]
-        self._headers = ['name', 'id', 'ip address', 'mac address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']
-        #self._headers = []
-        #for attr in dir(WorkerNode):
-        #    if attr.find('_') != 0 and attr.find('metadata') != 0:
-        #        self._headers.append(attr)            
-        
-        self.dataModel = NodeTableModel(self._data, self._headers, self)        
+        self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
         self.setModel(self.dataModel)
         
         self.resizeColumnsToContents()
@@ -55,29 +90,40 @@ class NodeTableView(QtGui.QTableView):
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.showContextMenu) 
         
-    def updateData(self):
-        self._data
-        
     def showContextMenu(self, pos):
         idx = self.indexAt(pos)
         if not idx.isValid():
             return
 
         idxs = self.selectedIndexes()
-        print idxs
         
         mac_addresses = []
         machineIds = []
         
         for i in idxs:
             # to support multi-select starting, need to make this an array of all selected and offline machines
-            mac_address = idx.sibling(i.row(), 3).data().toString()
-            status = idx.sibling(i.row(), 4).data().toString()
+            ma = 2 # this might get changed, find the real value...
+            for j in range(len(self._headers)):
+                if self._headers[j] == 'mac address':
+                    ma = j
+                    break
+            sa = 4
+            for k in range(len(self._headers)):
+                if self._headers[k] == 'status':
+                    sa = k
+                    break
+            mac_address = idx.sibling(i.row(), ma).data().toString()
+            status = idx.sibling(i.row(), sa).data().toString()
             if status == 'offline':
                 mac_addresses.append(mac_address)
         
+        menu = QtGui.QMenu(self)
+        add_machine = QtGui.QAction("Add Node", self)
+        menu.addAction(add_machine)            
+        self.connect(add_machine, QtCore.SIGNAL('triggered()'), self.addNode)
+            
         if len(mac_addresses) > 0:
-            menu = QtGui.QMenu(self)
+            
             lbl = 'Start Machine'
             lbl2 = "Remove Machine"
             if len(mac_addresses) > 1:
@@ -94,7 +140,7 @@ class NodeTableView(QtGui.QTableView):
             removeMach = lambda: self.removeMachines(mac_addresses)
             self.connect(remove_machine, QtCore.SIGNAL('triggered()'), removeMach)
             
-            menu.popup(QtGui.QCursor.pos()) 
+        menu.popup(QtGui.QCursor.pos()) 
             
     def startMachines(self, macAddresses):
         for machine in macAddresses:
@@ -102,12 +148,17 @@ class NodeTableView(QtGui.QTableView):
             wake_on_lan(str(machine))
             
     def removeMachines(self, macAddresses):
-        pass
-
-    def getCachedData(self):
-        nodes = []
+        for ma in macAddresses:
+            self.nodeCache.removeMachine(str(ma))
+            
+        # update the data model
+        self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
+        self.setModel(self.dataModel)
         
-        return nodes
+    def addNode(self):
+        ad = AddNodeDialog()
+        ad.setModal(True)
+        ad.exec_()
 
 class NodeTableModel(QtCore.QAbstractTableModel):
     def __init__(self, datain, headerdata, parent=None, *args): 

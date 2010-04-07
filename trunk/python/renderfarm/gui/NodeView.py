@@ -5,7 +5,7 @@ from PyQt4 import QtGui, QtCore
 from renderfarm.WakeOnLan import wake_on_lan
 from renderfarm.FarmManager import NodeCache
 from renderfarm.models import WorkerNode
-from renderfarm.gui.Validators import IPAddressValidator, MACAddressValidator
+#from renderfarm.gui.Validators import IPAddressValidator, MACAddressValidator
 
 class AddNodeDialog(QtGui.QDialog):
     def __init__(self, *args):

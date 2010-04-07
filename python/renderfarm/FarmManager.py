@@ -1,24 +1,23 @@
 import threading, time, socket, struct, os, sys
 from renderfarm.models import Session, WorkerNode
 from Queue import Queue
+import cherrypy, simplejson
+
+__version__ = "1.0.0"
 
 HB_PORT = 8085
 AUTODISCOVERY_PORT = 13331
 # port to use to query a node for its data as a json string
 STATUS_PORT = 18088 
 
-# message opcodes
-ACK_MSG =    0x0000
-PING_MSG =   0x0001
-STATUS_MSG = 0x0002
-QUERY_MSG =  0x0003
-
-
-def createPacket(opcode, size, data):
-    pkt = ''
-    
-    
-    return pkt
+cherrypy.config.update({'global':{
+    'engine.autoreload.on': False,
+    'log.screen': False,
+    'engine.SIGHUP': None,
+    'engine.SIGTERM': None,
+    'server.socket_host': '0.0.0.0', 
+    'server.socket_port': STATUS_PORT
+    }})
 
 
 class HeartbeatThread(threading.Thread):
@@ -26,10 +25,12 @@ class HeartbeatThread(threading.Thread):
     
     This is used by the windows service or daemon process, and is used to autodiscover running nodes."""
     
+    def __init__(self):
+        super(HeartbeatThread, self).__init__()
+        self._stop = threading.Event()
+    
     def run(self):
-        running = True
-        n = 1
-        
+        n = 1        
         #host = "localhost"
         host = '<broadcast>'
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -37,48 +38,25 @@ class HeartbeatThread(threading.Thread):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.bind(("", 0))
             
-        while running:
-            time.sleep(5)            
+        while not self.isStopped():                       
             # broadcast magic packet on port            
             s.sendto("DEDAFX-NODE", (host, AUTODISCOVERY_PORT))
+            time.sleep(5) 
 
-            #n += 1
-            #if n > 5:
-            #    running = False
-                
-        print "done!"
-    
-class EKGThread(threading.Thread):
-    """
-    Monitor heartbeats from worker nodes
-    
-    This thread should maintain a list of all nodes, persistent in a SQL DB, 
-    but also maintained in memory available only to this thread. DB will be updated with changes in states.
-    
-    The purpose of the DB is for state persistance, for when additional clients connect, so the complete list
-    of available nodes can be obtained. Offline nodes will not be broadcasting.
-    
-    SQL DB will also be the centralized source for configuration data, including ports for broadcasting.
-    
-    This thread decides when a node has gone offline, and updates the DB appropriately.
-    """
-    
-    def run(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        s.bind(("", HB_PORT))
-        print "waiting on port:", HB_PORT
-        while 1:
-            data, addr = s.recvfrom(1024)
-            print addr, ' ', data
-            # process data, addr
-            
-# queue to receive the incoming node autodiscovery 
-__nodeQueue = Queue()
+    def stop(self):
+        self._stop.set()
+        
+    def isStopped(self):
+        return self._stop.isSet()
+      
             
 class AutodiscoveryServerThread(threading.Thread):
     """Server thread to listen for other nodes"""
+    
+    def __init__(self, node_queue):
+        threading.Thread.__init__(self)
+        self._stop = threading.Event()
+        self.queue = node_queue
     
     def run(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -95,8 +73,8 @@ class AutodiscoveryServerThread(threading.Thread):
                 if addr in self.known_addrs:
                     continue
                 else:
-                    print addr, ' ', data
-                    __nodeQueue.put(addr)
+                    #print 'packet recieved in autodiscover thread:', addr, ' ', data
+                    self.queue.put(addr)
                     
             time.sleep(1)
             self.updateKnownAddrs()
@@ -109,21 +87,39 @@ class AutodiscoveryServerThread(threading.Thread):
                 continue
             else:
                 self.known_addrs.append(node.ip_address)
+                
+    def stop(self):
+        self._stop.set()
+        
+    def isStopped(self):
+        return self._stop.isSet()
             
-#class NodeQueueProcessingThread(threading.Thread):
+class NodeQueueProcessingThread(threading.Thread):
     
-def processNodeQueue():
-    """process the queue, if it has any items in it"""
-    session = Session()
-    while 1:
-        if not __nodeQueue.empty():
-            addr = __nodeQueue.get()
-            if session.query(WorkerNode).filter_by(ip_address=addr).first() != None:
-                newNode = WorkerNode()
-                newNode.ip_address = addr
+    def __init__(self, node_queue):
+        threading.Thread.__init__(self)
+        self._stop = threading.Event()
+        self.queue = node_queue
+    
+    def run(self):
+        """process the queue, if it has any items in it"""
+        session = Session()
+        while 1:
+            if not self.queue.empty():
+                (addr, port) = self.queue.get()
+                #print 'NodeQueueProcessingThread addr:', addr
+                if session.query(WorkerNode).filter_by(ip_address=addr).first() != None:
+                    newNode = WorkerNode()
+                    newNode.ip_address = addr
+                        
+                    session.add(addr)
+                    session.commit()
                     
-                session.add(addr)
-                session.commit()
+    def stop(self):
+        self._stop.set()
+        
+    def isStopped(self):
+        return self._stop.isSet()
                 
 class NodeCache(object): 
     
@@ -144,7 +140,7 @@ class NodeCache(object):
         except Exception, e:
             print e
         
-        
+        self.nodeQueue = Queue()
         self.initializeLocalNodeCache()
 
     
@@ -155,15 +151,13 @@ class NodeCache(object):
         Store the node information in the local sqlite database."""        
         
         # start the autodiscover and node queue update threads
-        #nq = NodeQueueProcessingThread()
+        nq = NodeQueueProcessingThread(self.nodeQueue)
+        nq.setName('Vinyard_nodeQueueProcessing') 
+        nq.start()
         
-        #nq = threading.Thread(target=processNodeQueue)
-        #nq.setName('Vinyard_nodeQueueProcessing') 
-        #nq.start()
-        
-        #autodisc = AutodiscoveryServerThread()
-        #autodisc.setName('Vinyard_autodiscoveryClient')        
-        #autodisc.start()
+        autodisc = AutodiscoveryServerThread(self.nodeQueue)
+        autodisc.setName('Vinyard_autodiscoveryClient')        
+        autodisc.start()
         
     def removeMachine(self, macAddress):
         """ remove a single machine from the memory array and the db """
@@ -180,7 +174,41 @@ class NodeCache(object):
                 self.nodes.remove(n)                
                 return
                 
-            
+class WorkerNodeConfigurationServer(object):
+    """used to set configuration settings for a worker node
+    
+    Can only be run locally by anyone, or remotely by an administrator."""
+    
+    def index(self):
+        return ""
+    index.exposed = True
+    
+    
+class WorkerNodeHttpServer(object):
+    def index(self):
+        if os.name == 'nt':
+            nm = os.getenv('COMPUTERNAME')
+            procs = os.getenv('NUMBER_OF_PROCESSORS')
+        else:
+            nm = os.getenv('HOSTNAME')
+            procs = 1
+        return simplejson.dumps({"name":nm, 
+                                 "status":"waiting", 
+                                 "ip_address":str(socket.gethostbyname(socket.getfqdn())),
+                                 "mac_address":"",
+                                 "platform":sys.platform,
+                                 "pools":"",
+                                 "version":__version__,
+                                 "cpus":procs,
+                                 "priority":1,
+                                 "engines":""
+                                 })
+    index.exposed = True
+    
+    def status(self):
+        return simplejson.dumps({"status":"waiting"})
+    status.exposed = True
+    
 
 class WorkerNodeDaemon(object):
     """the main worker node daemon class
@@ -188,10 +216,25 @@ class WorkerNodeDaemon(object):
     This can be run as a daemonized process or in a windows service"""
     
     def __init__(self, autodiscover=True):
-        if os.name == 'posix':
+        self.heartbeat = HeartbeatThread()
+        self.heartbeat.setName('Vinyard_heartbeat')        
+    
+    def __del__(self):
+        try:
+            self.stop()
+        except: 
             pass
-        elif os.name == 'nt':
-            pass
+    
+    def start(self):
+        self.heartbeat.start()
+        
+        cherrypy.tree.mount(WorkerNodeHttpServer(), '/')
+        cherrypy.engine.start()
+        cherrypy.engine.block()
+        
+    def stop(self):
+        cherrypy.engine.exit()
+        self.heartbeat.stop()
     
             
 def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
@@ -235,32 +278,13 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 
 if __name__ == '__main__':
     
-    if os.name == 'posix':
-        daemonize('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
-        # do the main loop for the worker node
-        #main()
-    elif os.name == 'nt':
-        import WorkerNodeService
-
-    #c = wmi.WMI()
+    daemon = WorkerNodeDaemon()
     
-    #for disk in c.Win32_LogicalDisk (DriveType=3):
-    #    print disk.Caption, "%0.2f%% free" % (100.0 * long (disk.FreeSpace) / long (disk.Size))
+    if os.name == 'posix':
+        daemonizeThisProcess('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
+        # do the main loop for the worker node
+        daemon.start()
+    elif os.name == 'nt':
+        daemon.start()
         
-    #for share in c.Win32_Share ():
-    #    print share.Name, share.Path
-
-
-    #for opsys in c.Win32_OperatingSystem ():
-    #    break
-
-    #print opsys.Reboot
-    #print opsys.Shutdown
-
-    #hbt = HeartbeatThread()
-    #hbt.setName('heartbeat')    
-    #ekg = EKGThread()
-    #ekg.setName('ekg')
-    #hbt.start()
-    #ekg.start()
     

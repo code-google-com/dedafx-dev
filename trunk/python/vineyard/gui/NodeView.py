@@ -2,9 +2,9 @@
 
 import sys, operator
 from PyQt4 import QtGui, QtCore
-from vinyard.WakeOnLan import wake_on_lan
-from vinyard.FarmManager import NodeCache
-from vinyard.models import WorkerNode
+from vineyard.WakeOnLan import wake_on_lan
+from vineyard.FarmManager import NodeCache
+from vineyard.models import WorkerNode
 #from renderfarm.gui.Validators import IPAddressValidator, MACAddressValidator
 
 class AddNodeDialog(QtGui.QDialog):
@@ -14,7 +14,11 @@ class AddNodeDialog(QtGui.QDialog):
         vbox = QtGui.QVBoxLayout(self)
         self.center()
         self.setWindowTitle('Add Node')
-        self.setWindowIcon(QtGui.QIcon('grapes.png'))
+        if os.path.exists('grapes.png'):
+            self.setWindowIcon(QtGui.QIcon('grapes.png'))
+        elif os.path.exists('gui/grapes.png'):
+            self.setWindowIcon(QtGui.QIcon('gui/grapes.png'))
+        
         
         grid = QtGui.QGridLayout()
         nameLabel = QtGui.QLabel("Name", self)
@@ -276,7 +280,11 @@ class StatusDelegate(QtGui.QStyledItemDelegate):
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv) 
     w = NodeTableView() 
-    w.setWindowTitle('Vinyard :: Node View')
-    w.setWindowIcon(QtGui.QIcon('grapes.png'))
+    w.setWindowTitle('Vineyard :: Node View')
+    if os.path.exists('grapes.png'):
+        w.setWindowIcon(QtGui.QIcon('grapes.png'))
+    elif os.path.exists('gui/grapes.png'):
+        w.setWindowIcon(QtGui.QIcon('gui/grapes.png'))
+        
     w.show() 
     sys.exit(app.exec_()) 

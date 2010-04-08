@@ -5,7 +5,7 @@ from PyQt4 import QtGui, QtCore
 # import all other gui
 from vinyard.gui import SystemConfiguration, NodeView
 # import all business logic
-from vinyard import FarmManager, models
+from vineyard import FarmManager, models
 
 class VineyardMainWindow(QtGui.QMainWindow):
     

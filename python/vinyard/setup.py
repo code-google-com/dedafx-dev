@@ -12,12 +12,18 @@ class Target:
 
 vinyardService = Target(
     description = "Vinyard renderfarm worker node service",
-    modules=["WorkerNodeService"],
-    cmdline_style='pywin32',
+    modules = ["VinyardService"],
+    cmdline_style = 'pywin32',
+    icon_resources = [(1, "res/vinyard.ico")]
     )
 
 setup(service=[vinyardService],
       options={"py2exe" : {
-          #"includes": ["sip", "PyQt4.QtSql"],
+          "includes": ["sip"],
           "packages": ["sqlalchemy.databases", "sqlalchemy.dialects.sqlite"]
-      }})
+      }},
+      windows=[
+          {"script":"FarmManager.py",
+          "icon_resources": [(1, "res/vinyard.ico")]
+      }]
+      )

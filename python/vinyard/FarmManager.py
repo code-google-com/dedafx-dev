@@ -1,11 +1,12 @@
 import threading, time, socket, struct, os, sys
-from renderfarm.models import Session, WorkerNode
+from vinyard.models import Session, WorkerNode
 from Queue import Queue
 import cherrypy, simplejson
 
 __version__ = "1.0.0"
 
-HB_PORT = 8085
+# default ports
+# port to use for autodiscovery
 AUTODISCOVERY_PORT = 13331
 # port to use to query a node for its data as a json string
 STATUS_PORT = 18088 
@@ -278,13 +279,20 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 
 if __name__ == '__main__':
     
-    daemon = WorkerNodeDaemon()
+    # instead of starting the daemons here, this should start the gui!
+    # another python file should start the daemon process on linux
+    
+    #daemon = WorkerNodeDaemon()
     
     if os.name == 'posix':
-        daemonizeThisProcess('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
+        #daemonizeThisProcess('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
         # do the main loop for the worker node
-        daemon.start()
+        #daemon.start()
+        pass
     elif os.name == 'nt':
-        daemon.start()
+        #daemon.start()
+        import vinyard.gui.MainWindow as farmmgr
+        farmmgr.run(sys.argv)
+        
         
     

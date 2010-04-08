@@ -94,6 +94,14 @@ Section "Start Menu Shortcuts"
   
 SectionEnd
 
+Section "Vinyard Service"
+
+  ExecWait "$INSTDIR\VinyardService.exe remove"
+  ExecWait "$INSTDIR\VinyardService.exe --startup auto install"
+  ExecWait "$INSTDIR\VinyardService.exe start"
+
+SectionEnd
+
 ;--------------------------------
 
 ; Uninstaller

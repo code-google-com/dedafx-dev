@@ -10,7 +10,11 @@ class SystemConfigurationDialog(QtGui.QDialog):
         self.resize(300, 500)
         self.center()
         self.setWindowTitle('Configuration')
-        self.setWindowIcon(QtGui.QIcon('grapes.png'))
+        if os.path.exists('grapes.png'):
+            self.setWindowIcon(QtGui.QIcon('grapes.png'))
+        elif os.path.exists('gui/grapes.png'):
+            self.setWindowIcon(QtGui.QIcon('gui/grapes.png'))
+        
         
         vbox = QtGui.QVBoxLayout()
         

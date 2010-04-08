@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
-import sys
+import sys, os
 from PyQt4 import QtGui, QtCore
 # import all other gui
-from renderfarm.gui import SystemConfiguration
+from vinyard.gui import SystemConfiguration, NodeView
 # import all business logic
-from renderfarm import * 
+from vinyard import FarmManager, models
 
 class VineyardMainWindow(QtGui.QMainWindow):
     
@@ -14,7 +14,11 @@ class VineyardMainWindow(QtGui.QMainWindow):
         self.resize(600, 300)
         self.center()
         self.setWindowTitle('Vineyard Manager')
-        self.setWindowIcon(QtGui.QIcon('grapes.png'))
+        
+        if os.path.exists('grapes.png'):
+            self.setWindowIcon(QtGui.QIcon('grapes.png'))
+        elif os.path.exists('gui/grapes.png'):
+            self.setWindowIcon(QtGui.QIcon('gui/grapes.png'))
         
         self.initMenuBar()
         
@@ -37,9 +41,12 @@ class VineyardMainWindow(QtGui.QMainWindow):
     def configure(self):
         # launch the configuration dialog
         pass
-
-if __name__ == '__main__':    
-    app = QtGui.QApplication(sys.argv)
+    
+def run(argv):
+    app = QtGui.QApplication(argv)
     main_win = VineyardMainWindow()    
     main_win.show()
     sys.exit(app.exec_())
+
+if __name__ == '__main__':    
+    run(sys.argv)

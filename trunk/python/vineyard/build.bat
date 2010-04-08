@@ -8,7 +8,7 @@ rmdir /S /Q build
 python setup.py py2exe
 
 :addresources
-copy VinyardInstaller.nsi dist\VinyardInstaller.nsi
+copy VineyardInstaller.nsi dist\VineyardInstaller.nsi
 copy gui\grapes.png dist\grapes.png
 copy res\header.bmp dist\header.bmp
 copy res\license.txt dist\license.txt
@@ -17,6 +17,6 @@ copy res\stopService.bat dist\stopService.bat
 copy c:\Python26\lib\site-packages\Pythonwin\mfc90.dll dist\mfc90.dll
 
 :installbuild
-makensis.exe ./dist/VinyardInstaller.nsi
+makensis.exe ./dist/VineyardInstaller.nsi
 
 :end

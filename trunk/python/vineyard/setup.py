@@ -8,22 +8,22 @@ class Target:
         self.version = "1.0.0"
         self.company_name = "DedaFX"
         self.copyright = "copyright 2010"
-        self.name = "Vinyard Renderfarm"
+        self.name = "Vineyard Renderfarm"
 
-vinyardService = Target(
-    description = "Vinyard renderfarm worker node service",
-    modules = ["VinyardService"],
+vineyardService = Target(
+    description = "Vineyard renderfarm worker node service",
+    modules = ["VineyardService"],
     cmdline_style = 'pywin32',
-    icon_resources = [(1, "res/vinyard.ico")]
+    icon_resources = [(1, "res/vineyard.ico")]
     )
 
-setup(service=[vinyardService],
+setup(service=[vineyardService],
       options={"py2exe" : {
           "includes": ["sip"],
           "packages": ["sqlalchemy.databases", "sqlalchemy.dialects.sqlite"]
       }},
       windows=[
           {"script":"FarmManager.py",
-          "icon_resources": [(1, "res/vinyard.ico")]
+          "icon_resources": [(1, "res/vineyard.ico")]
       }]
       )

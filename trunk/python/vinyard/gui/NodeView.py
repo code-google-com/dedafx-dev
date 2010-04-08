@@ -2,9 +2,9 @@
 
 import sys, operator
 from PyQt4 import QtGui, QtCore
-from renderfarm.WakeOnLan import wake_on_lan
-from renderfarm.FarmManager import NodeCache
-from renderfarm.models import WorkerNode
+from vinyard.WakeOnLan import wake_on_lan
+from vinyard.FarmManager import NodeCache
+from vinyard.models import WorkerNode
 #from renderfarm.gui.Validators import IPAddressValidator, MACAddressValidator
 
 class AddNodeDialog(QtGui.QDialog):

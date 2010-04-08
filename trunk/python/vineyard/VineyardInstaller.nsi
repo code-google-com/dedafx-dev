@@ -59,7 +59,7 @@ RequestExecutionLevel admin
   
 
 ; The stuff to install
-Section "Vinyard"
+Section "Vineyard"
 
   SectionIn RO
   

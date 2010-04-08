@@ -3,7 +3,7 @@
 import sys, os
 from PyQt4 import QtGui, QtCore
 # import all other gui
-from vinyard.gui import SystemConfiguration, NodeView
+from vineyard.gui import SystemConfiguration, NodeView
 # import all business logic
 from vineyard import FarmManager, models
 

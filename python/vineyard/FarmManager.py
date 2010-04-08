@@ -1,5 +1,5 @@
 import threading, time, socket, struct, os, sys
-from vinyard.models import Session, WorkerNode
+from vineyard.models import Session, WorkerNode
 from Queue import Queue
 import cherrypy, simplejson
 
@@ -153,11 +153,11 @@ class NodeCache(object):
         
         # start the autodiscover and node queue update threads
         nq = NodeQueueProcessingThread(self.nodeQueue)
-        nq.setName('Vinyard_nodeQueueProcessing') 
+        nq.setName('Vineyard_nodeQueueProcessing') 
         nq.start()
         
         autodisc = AutodiscoveryServerThread(self.nodeQueue)
-        autodisc.setName('Vinyard_autodiscoveryClient')        
+        autodisc.setName('Vineyard_autodiscoveryClient')        
         autodisc.start()
         
     def removeMachine(self, macAddress):
@@ -218,7 +218,7 @@ class WorkerNodeDaemon(object):
     
     def __init__(self, autodiscover=True):
         self.heartbeat = HeartbeatThread()
-        self.heartbeat.setName('Vinyard_heartbeat')        
+        self.heartbeat.setName('Vineyard_heartbeat')        
     
     def __del__(self):
         try:
@@ -291,7 +291,7 @@ if __name__ == '__main__':
         pass
     elif os.name == 'nt':
         #daemon.start()
-        import vinyard.gui.MainWindow as farmmgr
+        import vineyard.gui.MainWindow as farmmgr
         farmmgr.run(sys.argv)
         
         

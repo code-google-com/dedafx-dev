@@ -20,7 +20,7 @@ if os.name == 'nt':
     import win32netcon
     
 # this should refer to a centralized database for a large farm, configured at install time
-engine = create_engine('sqlite:///c:/vinyard.db', echo=False)
+engine = create_engine('sqlite:///c:/vineyard.db', echo=False)
 
 
 Session = sessionmaker(bind=engine)

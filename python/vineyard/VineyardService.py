@@ -20,4 +20,4 @@ class VinyardService(win32serviceutil.ServiceFramework):
 		self.ReportServiceStatus(win32service.SERVICE_STOPPED)
     
 if __name__ == '__main__':
-	win32serviceutil.HandleCommandLine(WorkerNodeService)
+	win32serviceutil.HandleCommandLine(VinyardService)

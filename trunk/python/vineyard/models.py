@@ -105,7 +105,7 @@ class Job(BaseObject):
     progress = Column(String)
     
     status = Column(String)
-    tasks = relation('Task', secondary=job_tasks_table, backref='job', cascade="all, delete, delete-orphan")
+    tasks = relation('Task', secondary=job_tasks_table, single_parent=True, backref='job', cascade="all, delete, delete-orphan")
     pool = Column(String)
     engine = Column(String)
     
@@ -313,7 +313,7 @@ if __name__ == '__main__':
         else:
             assert False, "unhandled option!"
 
-    
+    install("WorkerNodes")
     
     
     # create the permissions

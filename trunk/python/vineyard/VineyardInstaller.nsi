@@ -79,25 +79,33 @@ Section "Vineyard"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DedaFX\Vineyard" "NoRepair" 1
   WriteUninstaller "uninstall.exe"
   
+  ; add startup to the users directory
+  SetShellVarContext all
+  CreateShortCut "$SMSTARTUP\VineyardManager.lnk" "$INSTDIR\FarmManager.exe" "" "$INSTDIR\FarmManager.exe" 0
+  SetShellVarContext current
+
+  
 SectionEnd
 
 ; Optional section (can be disabled by the user)
 Section "Start Menu Shortcuts"
 
+  SetShellVarContext all
   CreateDirectory "$SMPROGRAMS\DedaFX\Vineyard"
   CreateShortCut "$SMPROGRAMS\DedaFX\Vineyard\Vineyard Manager.lnk" "$INSTDIR\FarmManager.exe" "" "$INSTDIR\FarmManager.exe" 0
   ;CreateShortCut "$SMPROGRAMS\DedaFX\Vineyard\Install Service.lnk" "$INSTDIR\installService.bat" "" "$INSTDIR\installService.bat" 0
   CreateShortCut "$SMPROGRAMS\DedaFX\Vineyard\Start Service.lnk" "$INSTDIR\startService.bat" "" "$INSTDIR\startService.bat" 0
   CreateShortCut "$SMPROGRAMS\DedaFX\Vineyard\Stop Service.lnk" "$INSTDIR\stopService.bat" "" "$INSTDIR\stopService.bat" 0
   CreateShortCut "$SMPROGRAMS\DedaFX\Vineyard\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  
+  SetShellVarContext current
   
 SectionEnd
 
 Section "Vineyard Service"
 
+  ;ExecWait "NET USER vineyard_user Vineyard1_pa$$ /ADD /passwordchg:no /expires:never"
   ExecWait "$INSTDIR\VineyardService.exe remove"
-  ExecWait "$INSTDIR\VineyardService.exe --startup auto install"
+  ExecWait "$INSTDIR\VineyardService.exe --startup auto install" ;--username vineyard_user --password Vineyard1_pa$$ install"
   ExecWait "$INSTDIR\VineyardService.exe start"
 
 SectionEnd

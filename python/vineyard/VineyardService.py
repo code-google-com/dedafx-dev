@@ -1,7 +1,7 @@
 import win32serviceutil
 import win32service
 
-from vinyard.FarmManager import WorkerNodeDaemon
+from vineyard.FarmManager import WorkerNodeDaemon
 
 class VinyardService(win32serviceutil.ServiceFramework):
 	_svc_name_ = 'VineyardService'

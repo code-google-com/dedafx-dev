@@ -31,7 +31,7 @@ class GlView(QtOpenGL.QGLWidget):
         self.trn_z = 0.
         
         self.mode = 0 # selection/translate/rotate the object/selection, pan/rotate/zoom the view
-        
+        self.selectBuffer = []
 
     def initializeGL(self):
         self.qglClearColor(QtGui.QColor(0.0,0.0,0.0))
@@ -39,6 +39,7 @@ class GlView(QtOpenGL.QGLWidget):
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glEnable(GL.GL_CULL_FACE)
         GL.glHint(GL.GL_LINE_SMOOTH_HINT, GL.GL_NICEST)
+        self.selectBuffer = GL.glSelectBuffer(32) 
         
     def paintGL(self):
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
@@ -95,6 +96,27 @@ class GlView(QtOpenGL.QGLWidget):
         button = ev.button()
         if button == QtCore.Qt.LeftButton:
             self.MouseButton = 0
+            #picking
+            vp = [0,0,0,0]
+            #GL.glRenderMode(GL.GL_SELECT)
+            #GL.glMatrixMode(GL.GL_PROJECTION)
+            GL.glPushMatrix()
+            #GL.glLoadIdentity()
+            vp = GL.glGetIntegerv(GL.GL_VIEWPORT)
+            print 'vp', vp
+            GLU.gluPickMatrix(ev.x(), vp[3]-ev.y(), 5, 5, vp)
+            #GLU.gluPerspective(45,1,0.1,1000)
+            #GL.glMatrixMode(GL.GL_MODELVIEW);
+
+            self.cnc.drawPick()
+            res = GL.glRenderMode(GL.GL_RENDER)
+            GL.glPopMatrix()
+            print str(res)#, res[0][2], res[0][2][-1]
+            if res and res[0][2]:
+                if res[0][2][-1] == 0:
+                    print 'workpiece selected'
+                else:
+                    print 'nothing selected'
         elif button == QtCore.Qt.RightButton:
             self.MouseButton = 2
         else:

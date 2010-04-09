@@ -22,10 +22,9 @@ class CncObject:
     """When building a cncObject, the points and lines are given in termas of a local origin. This allows the points to be calculated in global coords
     when constructing multiple pieces with the same object cut descriptions"""
     
-    def __init__(self, parent, name=None, offset=Point(0.0,0.0), z_rotation=0.0):
+    def __init__(self, parent, offset=Point(0.0,0.0), z_rotation=0.0):
         self.children = [] # empty array, to be filled with other CncObjects, lines, and arcs
         self.parent = parent # object parent must be workpiece or other CncObject
-        self.selected = False
         
     def setParent(self, parent):
         self.parent = parent
@@ -77,6 +76,15 @@ class Workpiece(CncObject):
         glVertex3d(self.max.x, self.min.y, self.max.z)        
         glEnd()
         
+    def drawPick(self):
+        for n in range(len(self.children)):
+            GL.glPushName(n)
+            self.children[n].draw()
+            GL.glPopName()
+        GL.glPushName(len(self.children)+1)
+        self.draw()
+        GL.glPopName()
+        
 class Tool:
     
     def __init__(self, radius, tip_type):
@@ -127,6 +135,9 @@ class CncMachine:
         
     def draw(self):
         self.workpiece.draw()
+        
+    def drawPick(self):
+        self.workpiece.drawPick()
             
 class Line(CncObject):
     

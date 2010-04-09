@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys
+import sys, os
 from PyQt4 import QtGui, QtCore
 
 class SystemConfigurationDialog(QtGui.QDialog):

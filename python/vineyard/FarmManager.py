@@ -1,15 +1,16 @@
-import threading, time, socket, struct, os, sys
-from vineyard.models import Session, WorkerNode
+import threading, time, socket, struct, os, sys, collections
+from vineyard.models import Session, WorkerNode, metadata, engine
 from Queue import Queue
-import cherrypy, simplejson
+import cherrypy, simplejson, urllib
+from vineyard import __version__, AUTODISCOVERY_PORT, STATUS_PORT, FarmConfig
 
-__version__ = "1.0.0"
+#__version__ = "1.0.0"
 
 # default ports
 # port to use for autodiscovery
-AUTODISCOVERY_PORT = 13331
+#AUTODISCOVERY_PORT = 13331
 # port to use to query a node for its data as a json string
-STATUS_PORT = 18088 
+#STATUS_PORT = 18088 
 
 cherrypy.config.update({'global':{
     'engine.autoreload.on': False,
@@ -40,9 +41,9 @@ class HeartbeatThread(threading.Thread):
         s.bind(("", 0))
             
         while not self.isStopped():                       
-            # broadcast magic packet on port            
+            # broadcast magic packet on port  
             s.sendto("DEDAFX-NODE", (host, AUTODISCOVERY_PORT))
-            time.sleep(5) 
+            time.sleep(3) 
 
     def stop(self):
         self._stop.set()
@@ -64,7 +65,6 @@ class AutodiscoveryServerThread(threading.Thread):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.bind(("", AUTODISCOVERY_PORT))
-        print "autodiscovery waiting on port:", AUTODISCOVERY_PORT
         self.known_addrs = []
         self.updateKnownAddrs()
         while 1:
@@ -74,7 +74,6 @@ class AutodiscoveryServerThread(threading.Thread):
                 if addr in self.known_addrs:
                     continue
                 else:
-                    #print 'packet recieved in autodiscover thread:', addr, ' ', data
                     self.queue.put(addr)
                     
             time.sleep(1)
@@ -83,11 +82,19 @@ class AutodiscoveryServerThread(threading.Thread):
                     
     def updateKnownAddrs(self):
         session = Session()
-        for node in session.query(WorkerNode):
-            if node in self.known_addrs:
-                continue
-            else:
-                self.known_addrs.append(node.ip_address)
+        metadata.create_all(engine)
+        try:
+            # try to create tables, beacause file may not exist yet
+            metadata.create_all(engine)
+            
+            for node in session.query(WorkerNode):
+                if node in self.known_addrs:
+                    continue
+                else:
+                    self.known_addrs.append(node.ip_address)
+        except:
+            pass
+            
                 
     def stop(self):
         self._stop.set()
@@ -105,16 +112,40 @@ class NodeQueueProcessingThread(threading.Thread):
     def run(self):
         """process the queue, if it has any items in it"""
         session = Session()
+        metadata.create_all(engine)
         while 1:
             if not self.queue.empty():
                 (addr, port) = self.queue.get()
-                #print 'NodeQueueProcessingThread addr:', addr
-                if session.query(WorkerNode).filter_by(ip_address=addr).first() != None:
+                session = Session()
+                nodes = session.query(WorkerNode).all()
+                bNewNode = True
+                for n in nodes:
+                    if n.ip_address == addr:
+                        bNewNode = False
+                        break
+                if bNewNode:
                     newNode = WorkerNode()
                     newNode.ip_address = addr
+                    
+                    url = "http://"+str(addr)+":"+str(STATUS_PORT)
+                    result = simplejson.load(urllib.urlopen(url))
+                    
+                    if result['name']:
+                        newNode.name = result['name']
+                        newNode.mac_address = '---' #result['mac_address'] 
+                        newNode.status = result['status']
+                        newNode.engines = result['engines']
+                        #'autodiscovery-on'
+                        newNode.cpus = result['cpus']
+                        newNode.priority = result['priority']
+                        newNode.platform = result['platform']
+                        newNode.version = result['version']
+                        newNode.pools = result['pools']
                         
-                    session.add(addr)
-                    session.commit()
+                        session.add(newNode)
+                        session.commit()
+                    else:
+                        print 'error with status infor from wroker node', addr, result['name'], result['mac_address']
                     
     def stop(self):
         self._stop.set()
@@ -132,17 +163,50 @@ class NodeCache(object):
         self.nodes = []
         
         self.session = Session()
-        
-        try:
-            for i in self.session.query(WorkerNode).order_by(WorkerNode.id): 
-                i.status = 'offline' # until we verify that it is online
-                self.nodes.append([i.id, i.name, i.mac_address, i.ip_address, i.status, i.platform, i.pools, i.version, i.cpus, i.priority, i.engines])
-            self.session.commit() # status changes to offline
-        except Exception, e:
-            print e
-        
+        metadata.create_all(engine)
+
+        for i in self.session.query(WorkerNode).all(): 
+            i.status = 'initializing' # until we verify that it is online
+            self.nodes.append([i.name, 
+                               i.mac_address, 
+                               i.ip_address, 
+                               i.status, 
+                               i.platform, 
+                               i.pools, 
+                               i.version, 
+                               i.cpus, 
+                               i.priority, 
+                               i.engines])
+        self.session.commit() # status changes to offline
+             
         self.nodeQueue = Queue()
         self.initializeLocalNodeCache()
+        
+        
+    def __del__(self):
+        self.nq.stop()
+        self.autodisc.stop()
+        self.statusupdate.stop()
+        
+    def autodiscover(self, on=True):
+        if on:
+            self.autodisc.start()
+        else:
+            self.autodisc.stop()
+            
+    def update(self):
+        self.nodes = []
+        for i in self.session.query(WorkerNode).all(): 
+            self.nodes.append([i.name, 
+                               i.mac_address, 
+                               i.ip_address, 
+                               i.status, 
+                               i.platform, 
+                               i.pools, 
+                               i.version, 
+                               i.cpus, 
+                               i.priority, 
+                               i.engines])
 
     
     def initializeLocalNodeCache(self):
@@ -152,13 +216,17 @@ class NodeCache(object):
         Store the node information in the local sqlite database."""        
         
         # start the autodiscover and node queue update threads
-        nq = NodeQueueProcessingThread(self.nodeQueue)
-        nq.setName('Vineyard_nodeQueueProcessing') 
-        nq.start()
+        self.nq = NodeQueueProcessingThread(self.nodeQueue)
+        self.nq.setName('Vineyard_nodeQueueProcessing') 
+        self.nq.start()
         
-        autodisc = AutodiscoveryServerThread(self.nodeQueue)
-        autodisc.setName('Vineyard_autodiscoveryClient')        
-        autodisc.start()
+        self.autodisc = AutodiscoveryServerThread(self.nodeQueue)
+        self.autodisc.setName('Vineyard_autodiscoveryClient')        
+        self.autodiscover()
+        
+        self.statusupdate = StatusUpdateThread()
+        self.statusupdate.setName('Vineyard_StatusUpdateThread')
+        self.statusupdate.start()
         
     def removeMachine(self, macAddress):
         """ remove a single machine from the memory array and the db """
@@ -167,13 +235,54 @@ class NodeCache(object):
                 n = self.nodes[i]
                 
                 dbn = self.session.query(WorkerNode).filter_by(mac_address=macAddress).first()
-                print dbn
+                print dbn, 'removed'
                 
                 self.session.delete( dbn )
                 self.session.commit()
                 
                 self.nodes.remove(n)                
                 return
+            
+class StatusUpdateThread(threading.Thread):
+    
+    def __init__(self, period=5):
+        threading.Thread.__init__(self)
+        self.session = Session()
+        metadata.create_all(engine)
+        self.period = period
+        self._stop = threading.Event()
+    
+    def run(self):
+        while not self.isStopped():
+            try:
+                self.__updateAllNodes()
+            except: pass
+            time.sleep(self.period)
+            
+    def __updateAllNodes(self):
+        for node in self.session.query(WorkerNode).all(): 
+            node.status = self.__updateStatus(node)
+        self.session.commit()
+            
+            
+    def __updateStatus(self, node):
+        try:
+            url = "http://"+str(node.ip_address)+":"+str(STATUS_PORT)
+            result = simplejson.load(urllib.urlopen(url))
+                        
+            if result['status']:
+                return result['status']
+            else:
+                return 'offline'
+        except:
+            return 'offline'
+        
+    def stop(self):
+        self._stop.set()
+        
+    def isStopped(self):
+        return self._stop.isSet()
+
                 
 class WorkerNodeConfigurationServer(object):
     """used to set configuration settings for a worker node
@@ -202,7 +311,8 @@ class WorkerNodeHttpServer(object):
                                  "version":__version__,
                                  "cpus":procs,
                                  "priority":1,
-                                 "engines":""
+                                 "engines":"",
+                                 "autodiscovery-on":(not __HEARTBEAT__.isStopped())
                                  })
     index.exposed = True
     
@@ -211,13 +321,19 @@ class WorkerNodeHttpServer(object):
     status.exposed = True
     
 
+    
+__HEARTBEAT__ = HeartbeatThread()
+
 class WorkerNodeDaemon(object):
     """the main worker node daemon class
     
     This can be run as a daemonized process or in a windows service"""
     
     def __init__(self, autodiscover=True):
-        self.heartbeat = HeartbeatThread()
+        if not FarmConfig.load():
+            FarmConfig.create()
+        self.autodiscover = autodiscover
+        self.heartbeat = __HEARTBEAT__
         self.heartbeat.setName('Vineyard_heartbeat')        
     
     def __del__(self):
@@ -279,20 +395,11 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 
 if __name__ == '__main__':
     
-    # instead of starting the daemons here, this should start the gui!
-    # another python file should start the daemon process on linux
+    if not FarmConfig.load():
+        FarmConfig.create()
     
-    #daemon = WorkerNodeDaemon()
-    
-    if os.name == 'posix':
-        #daemonizeThisProcess('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
-        # do the main loop for the worker node
-        #daemon.start()
-        pass
-    elif os.name == 'nt':
-        #daemon.start()
-        import vineyard.gui.MainWindow as farmmgr
-        farmmgr.run(sys.argv)
-        
+    import vineyard.gui.MainWindow as farmmgr
+    farmmgr.run(sys.argv)
+       
         
     

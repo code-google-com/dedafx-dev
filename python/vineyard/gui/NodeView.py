@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys, operator
+import sys, operator, os
 from PyQt4 import QtGui, QtCore
 from vineyard.WakeOnLan import wake_on_lan
 from vineyard.FarmManager import NodeCache
@@ -69,15 +69,27 @@ class AddNodeDialog(QtGui.QDialog):
         
 
 class NodeView(QtGui.QWidget):
+    """container class for placing table into a dock widget"""
     def __init__(self, *args):
         QtGui.QWidget.__init__(self, *args)
+        layout = QtGui.QVBoxLayout()
+        table = NodeTableView(self)
+        layout.addWidget(table)
+        layout.setMargin(2)
+        self.setLayout(layout)
 
 class NodeTableView(QtGui.QTableView):
+    
     def __init__(self, *args):
         QtGui.QTableView.__init__(self, *args)
         
         self.nodeCache = NodeCache()
-        self._headers = ['id', 'name', 'mac address', 'ip address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']          
+        
+        #self.nodeCache.onUpdate = self.updateView
+        
+        self._headers = ['name', 'mac address', 'ip address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']          
+
+        #print 'in NodeTableView, nodes len=', len(self.nodeCache.nodes)
         
         self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
         self.setModel(self.dataModel)
@@ -86,14 +98,22 @@ class NodeTableView(QtGui.QTableView):
         self.resizeRowsToContents()
         vh = self.verticalHeader()
         vh.setVisible(False)        
-        self.setMinimumSize(400, 300)
+        #self.setMinimumSize(400, 300)
+        #self.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
+        #self.horizontalStretch(True)
         self.setSortingEnabled(True)
         self.setShowGrid(True)
         self.setAlternatingRowColors(True)
+        #print self.sizeHint()
         
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.showContextMenu) 
         
+        self.timer = QtCore.QTimer()
+        self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.onUpdate)
+        self.timer.start(1000)
+  
+       
     def showContextMenu(self, pos):
         idx = self.indexAt(pos)
         if not idx.isValid():
@@ -163,6 +183,14 @@ class NodeTableView(QtGui.QTableView):
         ad = AddNodeDialog()
         ad.setModal(True)
         ad.exec_()
+        
+    def onUpdate(self):
+        # update the data model
+        self.nodeCache.update()
+        
+        self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
+        self.setModel(self.dataModel)
+        
 
 class NodeTableModel(QtCore.QAbstractTableModel):
     def __init__(self, datain, headerdata, parent=None, *args): 
@@ -188,14 +216,16 @@ class NodeTableModel(QtCore.QAbstractTableModel):
          
 
         elif role == QtCore.Qt.BackgroundRole:
-            if index.column() == 4:
-                stat_data = index.sibling(index.row(), 4).data()
+            if index.column() == 3:
+                stat_data = index.sibling(index.row(), 3).data()
                 stat_val = stat_data.toString() 
             
                 if stat_val == 'waiting':
-                    return QtCore.QVariant(QtGui.QBrush(QtCore.Qt.yellow)) 
+                    return QtCore.QVariant(QtGui.QBrush(QtCore.Qt.green)) 
                 elif stat_val == 'busy':
-                    return QtCore.QVariant(QtGui.QBrush(QtCore.Qt.green))
+                    return QtCore.QVariant(QtGui.QBrush(QtCore.Qt.yellow))
+                elif stat_val == 'initializing':
+                    return QtCore.QVariant(QtGui.QBrush(QtCore.Qt.white))
                 else:
                     return QtCore.QVariant(QtGui.QBrush(QtCore.Qt.red))
                 
@@ -279,7 +309,7 @@ class StatusDelegate(QtGui.QStyledItemDelegate):
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv) 
-    w = NodeTableView() 
+    w = NodeView() 
     w.setWindowTitle('Vineyard :: Node View')
     if os.path.exists('grapes.png'):
         w.setWindowIcon(QtGui.QIcon('grapes.png'))

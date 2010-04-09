@@ -20,7 +20,12 @@ if os.name == 'nt':
     import win32netcon
     
 # this should refer to a centralized database for a large farm, configured at install time
-engine = create_engine('sqlite:///c:/vineyard.db', echo=False)
+user_path = os.path.expanduser('~')
+default_db_dir = user_path + '/DedaFX/Vinyard'
+if not os.path.exists(default_db_dir):
+    os.makedirs(default_db_dir)
+    
+engine = create_engine('sqlite:///'+default_db_dir+'/vineyard.db', echo=False)
 
 
 Session = sessionmaker(bind=engine)

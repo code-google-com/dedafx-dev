@@ -399,7 +399,7 @@ if __name__ == '__main__':
         FarmConfig.create()
     
     import vineyard.gui.MainWindow as farmmgr
-    farmmgr.run(sys.argv)
+    farmmgr.run(sys.argv[1:])
        
         
     

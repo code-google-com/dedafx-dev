@@ -23,7 +23,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
     
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
-        self.resize(600, 300)
+        #self.resize(600, 300)
         self.center()
         self.setWindowTitle('Vineyard Manager')
         traySignal = "activated(QSystemTrayIcon::ActivationReason)"        
@@ -49,7 +49,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	self.initStatusBar()
 	self.initDockWindows()
 	
-	self.showMaximized()
+	#self.showMaximized()
         
     def initMenuBar(self):
         menubar = self.menuBar()
@@ -186,9 +186,11 @@ class VineyardMainWindow(QtGui.QMainWindow):
     
 def run(argv):
     app = QtGui.QApplication(argv)
-    main_win = VineyardMainWindow()    
-    main_win.show()
+    main_win = VineyardMainWindow() 
+    for i in argv:
+	if i.lower().find('show') > -1:
+	    main_win.show()
     sys.exit(app.exec_())
 
 if __name__ == '__main__':    
-    run(sys.argv)
+    run(sys.argv[1:])

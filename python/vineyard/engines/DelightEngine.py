@@ -4,7 +4,7 @@ from vineyard.engines.BaseEngines import *
 class DelightEngine(RenderEngine):
     
     def __init__(self):
-        RenderEngine.__init__(self, version="1.0")
+        RenderEngine.__init__(self, version="1.0", name="3Delight Engine")
         if os.name != 'nt' and os.name != 'mac':
             raise Exception, "3Delight engine currently only works on Windows!"
         if not self.isEnabled():
@@ -98,7 +98,7 @@ class DelightEngine(RenderEngine):
 
         
 if __name__ == '__main__':
-    delight_engine = DelightEngine()
+    #delight_engine = DelightEngine()
     print EngineRegistry.getEngineNames()
 
         

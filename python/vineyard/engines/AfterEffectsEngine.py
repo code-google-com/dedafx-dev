@@ -4,7 +4,7 @@ from vineyard.engines.BaseEngines import *
 class AfterEffectsCS4Engine(RenderEngine):
     
     def __init__(self):
-        RenderEngine.__init__(self, version="1.0")
+        RenderEngine.__init__(self, version="1.0", name="After Effects CS4 Engine")
         if os.name != 'nt' and os.name != 'mac':
             raise Exception, "After Effects engine currently only works on Windows!"
         if not self.isEnabled():
@@ -155,6 +155,6 @@ class AfterEffectsCS4Engine(RenderEngine):
 
         
 if __name__ == '__main__':
-    ae_cs4_engine = AfterEffectsCS4Engine()
+    #ae_cs4_engine = AfterEffectsCS4Engine()
     print EngineRegistry.getEngineNames()
         

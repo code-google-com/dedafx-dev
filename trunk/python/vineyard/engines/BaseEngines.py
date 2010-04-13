@@ -17,7 +17,7 @@ class __EngineRegistry(object):
     def getEngineNames(self):
 	names = []
 	for e in self.__registry:
-	    names.append(e.__class__.__name__)
+	    names.append(e.name)
 	return names
     
     def getEngine(self, name):
@@ -30,10 +30,11 @@ EngineRegistry = __EngineRegistry()
 
 class BaseEngine(object):
     
-    def __init__(self, version="1.0", cmd=""):
+    def __init__(self, version="1.0", cmd="", name = "Base Engine"):
         self.__version = str(version)
         self.__cmd = str(cmd)
-	EngineRegistry.register(self)
+	self.__name = str(name)
+	EngineRegistry.register(self)	
     
     def getVersion(self):
         return self.__version
@@ -50,6 +51,14 @@ class BaseEngine(object):
         self.__cmd = str(cmd)
     
     command = property(getCmd, setCmd)
+    
+    def getName(self):
+	return self.__name
+    
+    def setName(self, name):
+	raise Exception, "Only the derived class constructor can set the name!"
+    
+    name = property(getName, setName)
     
     def getApp(self):
         return self.__app

@@ -138,8 +138,8 @@ class NodeTableView(QtGui.QTableView):
                     break
             mac_address = idx.sibling(i.row(), ma).data().toString()
             status = idx.sibling(i.row(), sa).data().toString()
-            if status == 'offline':
-                mac_addresses.append(mac_address)
+            #if status == 'offline':
+            mac_addresses.append(mac_address)
         
         menu = QtGui.QMenu(self)
         add_machine = QtGui.QAction("Add Node", self)

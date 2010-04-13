@@ -1,5 +1,5 @@
 import subprocess, os, sys, unittest, time
-from vineyard.engines.BaseEngines import RenderEngine
+from vineyard.engines.BaseEngines import *
 
 class DelightEngine(RenderEngine):
     
@@ -98,14 +98,7 @@ class DelightEngine(RenderEngine):
 
         
 if __name__ == '__main__':
-    eng = DelightEngine()
-    eng.buildCommand("test.rib")
-    print eng.isEnabled()
-    print eng.command
-    #sp = aeEng.run()
-    #output = sp.stdout
-    #while sp.poll() == None:
-    #    print sp.communicate()
-    #    time.sleep(1)
-    #print 'done!'
+    delight_engine = DelightEngine()
+    print EngineRegistry.getEngineNames()
+
         

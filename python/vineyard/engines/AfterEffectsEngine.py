@@ -1,5 +1,5 @@
 import subprocess, os, sys, unittest, time
-from vineyard.engines.BaseEngines import RenderEngine
+from vineyard.engines.BaseEngines import *
 
 class AfterEffectsCS4Engine(RenderEngine):
     
@@ -155,14 +155,6 @@ class AfterEffectsCS4Engine(RenderEngine):
 
         
 if __name__ == '__main__':
-    aeEng = AfterEffectsCS4Engine()
-    aeEng.buildCommand(project="test.aep")
-    #print aeEng.isEnabled()
-    #print aeEng.command
-    sp = aeEng.run()
-    output = sp.stdout
-    while sp.poll() == None:
-        print sp.communicate()
-        time.sleep(1)
-    print 'done!'
+    ae_cs4_engine = AfterEffectsCS4Engine()
+    print EngineRegistry.getEngineNames()
         

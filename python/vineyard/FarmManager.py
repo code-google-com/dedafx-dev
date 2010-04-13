@@ -3,6 +3,8 @@ from vineyard.models import Session, WorkerNode, metadata, engine
 from Queue import Queue
 import cherrypy, simplejson, urllib
 from vineyard import __version__, AUTODISCOVERY_PORT, STATUS_PORT, FarmConfig
+import vineyard.engines
+from vineyard.engines.BaseEngines import EngineRegistry
 
 #__version__ = "1.0.0"
 
@@ -84,10 +86,7 @@ class AutodiscoveryServerThread(threading.Thread):
         session = Session()
         metadata.create_all(engine)
         try:
-            # try to create tables, beacause file may not exist yet
-            metadata.create_all(engine)
-            
-            for node in session.query(WorkerNode):
+            for node in session.query(WorkerNode).all():
                 if node in self.known_addrs:
                     continue
                 else:
@@ -134,7 +133,17 @@ class NodeQueueProcessingThread(threading.Thread):
                         newNode.name = result['name']
                         newNode.mac_address = '---' #result['mac_address'] 
                         newNode.status = result['status']
-                        newNode.engines = result['engines']
+                        
+                        engines = ""
+                        if type(result['engines']) == list:
+                            for e in range(len(result['engines'])):
+                                engines += str(result['engines'][e])
+                                if e < len(result['engines'])-1:
+                                    engines += ", "
+                        else:
+                            engines = str(result['engines'])
+                        
+                        newNode.engines = engines
                         #'autodiscovery-on'
                         newNode.cpus = result['cpus']
                         newNode.priority = result['priority']
@@ -197,6 +206,16 @@ class NodeCache(object):
     def update(self):
         self.nodes = []
         for i in self.session.query(WorkerNode).all(): 
+            engines = ""
+            if type(i.engines) == list:
+                for e in len(i.engines):
+                    engines += str(i.engines[e])
+                    if e < len(i.engines)-1:
+                        engines += ", "
+            else:
+                engines = str(i.engines)
+            
+                    
             self.nodes.append([i.name, 
                                i.mac_address, 
                                i.ip_address, 
@@ -206,7 +225,7 @@ class NodeCache(object):
                                i.version, 
                                i.cpus, 
                                i.priority, 
-                               i.engines])
+                               engines])
 
     
     def initializeLocalNodeCache(self):
@@ -311,7 +330,7 @@ class WorkerNodeHttpServer(object):
                                  "version":__version__,
                                  "cpus":procs,
                                  "priority":1,
-                                 "engines":"",
+                                 "engines":EngineRegistry.getEngineNames(),
                                  "autodiscovery-on":(not __HEARTBEAT__.isStopped())
                                  })
     index.exposed = True
@@ -394,6 +413,8 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 
 
 if __name__ == '__main__':
+    
+    print EngineRegistry.getEngineNames()
     
     if not FarmConfig.load():
         FarmConfig.create()

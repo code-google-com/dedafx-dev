@@ -1,10 +1,39 @@
+import sys
 
+class __EngineRegistry(object):
+    
+    def __init__(self):
+        self.__registry = []
+        
+    def register(self, engine):
+	if issubclass(engine.__class__, BaseEngine):
+	    for e in self.__registry:
+		if e.__class__ == engine.__class__:
+		    return True
+	    self.__registry.append(engine)
+	    return True
+	return False
+	
+    def getEngineNames(self):
+	names = []
+	for e in self.__registry:
+	    names.append(e.__class__.__name__)
+	return names
+    
+    def getEngine(self, name):
+	for e in self.__registry:
+	    if e.__class__.__name__ == name:
+		return e
+	
+EngineRegistry = __EngineRegistry()
+    
 
 class BaseEngine(object):
     
     def __init__(self, version="1.0", cmd=""):
         self.__version = str(version)
         self.__cmd = str(cmd)
+	EngineRegistry.register(self)
     
     def getVersion(self):
         return self.__version

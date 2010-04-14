@@ -3,11 +3,11 @@ from vineyard.engines.BaseEngines import *
 
 class DelightEngine(RenderEngine):
     
-    def __init__(self):
+    def __init__(self, checkEnabled=True):
         RenderEngine.__init__(self, version="1.0", name="3Delight Engine")
         if os.name != 'nt' and os.name != 'mac':
             raise Exception, "3Delight engine currently only works on Windows!"
-        if not self.isEnabled():
+        if checkEnabled and not self.isEnabled():
             raise Exception, "3Delight not found on this machine!"
         
     def run(self):

@@ -3,11 +3,28 @@ from vineyard.engines.BaseEngines import *
 
 class AfterEffectsCS4Engine(RenderEngine):
     
-    def __init__(self):
+    commandFormat = [{'Project':['project', 'str', 'required']},
+                {'Composition':['comp', 'str','not-required', None]},
+                {'Memory Usage':['mem_usage', 'str','not-required', None]},
+                {'Start Frame':['start_frame','int','not-required', None]},
+                {'End Frame':['end_frame', 'int','not-required', None]},
+                {'Increment':['increment','int','not-required', None]},
+                {'Reuse':['reuse', 'bool','not-required', None]},
+                {'Output Module Template':['output_module_template', 'str','not-required', None]},
+                {'Render Settings Template':['render_settings_template', 'str','not-required', None]},
+                {'Output Path':['output_path', 'str','not-required', None]},
+                {'Log File Path':['log_file_path', 'str','not-required', None]},
+                {'Close Flag':['close_flag', 'str','not-required', [None, ""]]},
+                {'Index in Render Queue':['index_in_render_queue', 'str','not-required', None]},
+                {'MP Enabled':['mp_enabled', 'str','not-required', None]},
+                {'Continue on Missing Footage':['continue_on_missing_footage', 'bool','not-required', None]}
+                ]
+    
+    def __init__(self, checkEnabled=True):
         RenderEngine.__init__(self, version="1.0", name="After Effects CS4 Engine")
         if os.name != 'nt' and os.name != 'mac':
             raise Exception, "After Effects engine currently only works on Windows!"
-        if not self.isEnabled():
+        if checkEnabled and not self.isEnabled():
             raise Exception, "After Effects CS4 not found on this machine!"
         
     def run(self):
@@ -133,6 +150,9 @@ class AfterEffectsCS4Engine(RenderEngine):
                 raise Exception, "continue_on_missing_footage needs to be an int or bool."
         
     def isEnabled(self):
+        if os.name != 'nt' and os.name != 'mac':
+            return False
+        
         prog_dir = os.environ['ProgramFiles']
         if os.name == 'nt':
             for d in [ 'Adobe', 'Adobe After Effects CS4', 'Support Files' ]:

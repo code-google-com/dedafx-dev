@@ -3,27 +3,14 @@
 import sys, os
 from PyQt4 import QtGui, QtCore
 # import all other gui
-from vineyard.gui import SystemConfiguration, NodeView, Submit
+from vineyard.gui import SystemConfiguration, NodeView, Submit, JobView
 # import all business logic
 from vineyard import FarmManager, models
-
-#lass VineyardTrayIcon(QtGui.QSystemTrayIcon):
-
-#    def __init__(self, icon, parent=None):
-	
-	
-		
-#        QtGui.QSystemTrayIcon.__init__(self, icon, parent)
-#        menu = QtGui.QMenu(parent)
-#        exitAction = menu.addAction("Exit")
-#        self.setContextMenu(menu)
-
 
 class VineyardMainWindow(QtGui.QMainWindow):
     
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
-        #self.resize(600, 300)
         self.center()
         self.setWindowTitle('Vineyard Manager')
         traySignal = "activated(QSystemTrayIcon::ActivationReason)"        
@@ -118,7 +105,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	# central widget
 	#self.jobs_dock = QtGui.QDockWidget("Job Queue", self)
         #self.jobs_dock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
-	self.jobs_view = QtGui.QTreeView(self)
+	self.jobs_view = JobView.JobView(self)
 	#self.jobs_dock.setWidget(self.jobs_view)
 	#self.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.jobs_dock)
         #self.viewmenu.addAction(self.jobs_dock.toggleViewAction())
@@ -129,7 +116,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	
 	self.logs_dock = QtGui.QDockWidget("Logs", self)
         self.logs_dock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
-	#self.node_dock.setWidget(self.node_view)
+	self.logs_dock.setWidget(QtGui.QTextEdit(self))
 	self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.logs_dock)
         self.viewmenu.addAction(self.logs_dock.toggleViewAction())
 	

@@ -83,28 +83,23 @@ class NodeTableView(QtGui.QTableView):
     def __init__(self, *args):
         QtGui.QTableView.__init__(self, *args)
         
-        self.nodeCache = NodeCache()
-        
-        #self.nodeCache.onUpdate = self.updateView
-        
-        self._headers = ['name', 'mac address', 'ip address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']          
-
-        #print 'in NodeTableView, nodes len=', len(self.nodeCache.nodes)
+        self.nodeCache = NodeCache()        
+        self._headers = ['name', 'mac address', 'ip address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']       
         
         self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
         self.setModel(self.dataModel)
         
         self.resizeColumnsToContents()
+        self.origWidths = []
+        for col in range(len(self._headers)):
+            self.origWidths.append( self.columnWidth(col) )
         self.resizeRowsToContents()
         vh = self.verticalHeader()
-        vh.setVisible(False)        
-        #self.setMinimumSize(400, 300)
-        #self.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
-        #self.horizontalStretch(True)
+        vh.setVisible(False) 
+        
         self.setSortingEnabled(True)
         self.setShowGrid(True)
         self.setAlternatingRowColors(True)
-        #print self.sizeHint()
         
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connect(self, QtCore.SIGNAL("customContextMenuRequested(const QPoint &)"), self.showContextMenu) 
@@ -165,6 +160,22 @@ class NodeTableView(QtGui.QTableView):
             self.connect(remove_machine, QtCore.SIGNAL('triggered()'), removeMach)
             
         menu.popup(QtGui.QCursor.pos()) 
+        
+    def resizeEvent(self, evt):
+        QtGui.QTableView.resizeEvent(self, evt)
+        self.resizeColumnsToContents()
+        w = self.width()
+        hw = 0
+        for col in range(len(self._headers)):
+            hw += self.columnWidth(col)            
+        n = w-hw        
+        for col in range(len(self._headers)):
+            newWidth = self.columnWidth(col)
+            newWidth += int( n/len(self._headers) )
+            if newWidth < self.origWidths[col]:
+                # clamp the min value
+                newWidth = self.origWidths[col]
+            self.setColumnWidth(col, newWidth)
             
     def startMachines(self, macAddresses):
         for machine in macAddresses:

@@ -61,6 +61,9 @@ RequestExecutionLevel admin
 ; The stuff to install
 Section "Vineyard"
 
+  ExecWait "$INSTDIR\VineyardService.exe stop"
+  ExecWait "$INSTDIR\VineyardService.exe remove"
+
   SectionIn RO
   
   ; Set output path to the installation directory.
@@ -104,6 +107,7 @@ SectionEnd
 Section "Vineyard Service"
 
   ;ExecWait "NET USER vineyard_user Vineyard1_pa$$ /ADD /passwordchg:no /expires:never"
+  ExecWait "$INSTDIR\VineyardService.exe stop"
   ExecWait "$INSTDIR\VineyardService.exe remove"
   ExecWait "$INSTDIR\VineyardService.exe --startup auto install" ;--username vineyard_user --password Vineyard1_pa$$ install"
   ExecWait "$INSTDIR\VineyardService.exe start"

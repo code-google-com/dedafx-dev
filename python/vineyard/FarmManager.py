@@ -204,11 +204,12 @@ class NodeCache(object):
             self.autodisc.stop()
             
     def update(self):
+        """This updates the memory array with the data from the database"""
         self.nodes = []
         for i in self.session.query(WorkerNode).all(): 
             engines = ""
             if type(i.engines) == list:
-                for e in len(i.engines):
+                for e in range(len(i.engines)):
                     engines += str(i.engines[e])
                     if e < len(i.engines)-1:
                         engines += ", "
@@ -280,20 +281,49 @@ class StatusUpdateThread(threading.Thread):
             
     def __updateAllNodes(self):
         for node in self.session.query(WorkerNode).all(): 
-            node.status = self.__updateStatus(node)
+            node.status = self.__update(node)
         self.session.commit()
             
             
-    def __updateStatus(self, node):
+    def __update(self, node):
         try:
             url = "http://"+str(node.ip_address)+":"+str(STATUS_PORT)
             result = simplejson.load(urllib.urlopen(url))
+            
+            if result['name']: 
+                node.name = str(result['name'])
+            if result['mac_address']: 
+                node.mac_address = str(result['mac_address'])
+            if result['ip_address']:
+                node.ip_address = str(result['ip_address'])
+            if result['platform']:
+                node.platform = str(result['platform'])
+            if result['pools']:
+                node.pools = str(result['pools'])
+            if result['version']:
+                node.version = str(result['version'])
+            if result['cpus']:
+                node.cpus = int(result['cpus'])
+            if result['priority']:
+                node.priority = int(result['priority'])
+            
+            engines = ""
+            if result['engines']:
+                if type(result['engines']) == list:
+                    for e in range(len(result['engines'])):
+                        engines += str(result['engines'][e])
+                        if e < len(result['engines'])-1:
+                            engines += ", "
+                else:
+                    engines = str(result['engines'])
+            node.engines = engines
                         
             if result['status']:
                 return result['status']
             else:
                 return 'offline'
-        except:
+        except Exception, e:
+            print e
             return 'offline'
         
     def stop(self):
@@ -398,7 +428,7 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
         if pid > 0:
             sys.exit(0) # Exit second parent.
     except OSError, e:
-        sys.stderr.write ("fork #2 failed: (%d) %s\n" % (e.errno, e.strerror)    )
+        sys.stderr.write ("fork #2 failed: (%d) %s\n" % (e.errno, e.strerror))
         sys.exit(1)
 
     # Now I am a daemon!
@@ -414,7 +444,7 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 
 if __name__ == '__main__':
     
-    print EngineRegistry.getEngineNames()
+    #print EngineRegistry.getEngineNames()
     
     if not FarmConfig.load():
         FarmConfig.create()

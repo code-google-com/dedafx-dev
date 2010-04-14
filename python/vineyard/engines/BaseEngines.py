@@ -20,6 +20,11 @@ class __EngineRegistry(object):
 	    names.append(e.name)
 	return names
     
+    def getEngineByName(self, nme):
+	for e in self.__registry:
+	    if e.name == nme:
+		return e
+    
     def getEngine(self, name):
 	for e in self.__registry:
 	    if e.__class__.__name__ == name:
@@ -29,6 +34,9 @@ EngineRegistry = __EngineRegistry()
     
 
 class BaseEngine(object):
+    
+    # empty command dictionary
+    _cmdFormat = []
     
     def __init__(self, version="1.0", cmd="", name = "Base Engine"):
         self.__version = str(version)
@@ -70,6 +78,17 @@ class BaseEngine(object):
             raise Exception, "Only derived classes can set the application for the engine!"
     
     app = property(getApp, setApp)
+    
+    def getCmdFormat(self):
+	return self._cmdFormat
+    
+    def setCmdFormat(self, cmdFormat):
+	if issubclass(self.__class__, BaseEngine):
+            self._cmdFormat = str(cmdFormat)
+        else:
+            raise Exception, "Only derived classes can set the command dictionary for the engine!"
+	
+    commandFormat = property(getCmdFormat, setCmdFormat)
     
     def run(self):
         """must be implemented in the derived classes"""

@@ -68,22 +68,24 @@ class AddNodeDialog(QtGui.QDialog):
         self.close()
         
 
-class NodeView(QtGui.QWidget):
+class NodeWidget(QtGui.QWidget):
     """container class for placing table into a dock widget"""
-    def __init__(self, *args):
-        QtGui.QWidget.__init__(self, *args)
+    def __init__(self, nodecache, parent=None):
+        super(NodeWidget, self).__init__(parent)
+        #QtGui.QWidget.__init__(parent=self, *args)
         layout = QtGui.QVBoxLayout()
-        table = NodeTableView(self)
+        table = NodeTableView(nodecache, self)
         layout.addWidget(table)
         layout.setMargin(2)
         self.setLayout(layout)
 
 class NodeTableView(QtGui.QTableView):
     
-    def __init__(self, *args):
-        QtGui.QTableView.__init__(self, *args)
+    def __init__(self, nodecache, parent=None):
+        super(NodeTableView, self).__init__(parent)
+        #QtGui.QTableView.__init__(self, parent)
         
-        self.nodeCache = NodeCache()        
+        self.nodeCache = nodecache        
         self._headers = ['name', 'mac address', 'ip address', 'status', 'platform', 'pools', 'version', 'cpus', 'priority', 'engines']       
         
         self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
@@ -187,8 +189,7 @@ class NodeTableView(QtGui.QTableView):
             self.nodeCache.removeMachine(str(ma))
             
         # update the data model
-        self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
-        self.setModel(self.dataModel)
+        self.onUpdate()
         
     def addNode(self):
         ad = AddNodeDialog()
@@ -196,11 +197,13 @@ class NodeTableView(QtGui.QTableView):
         ad.exec_()
         
     def onUpdate(self):
+        """
+        This is called periodically to keep the view up to date with the database, which is also periodically updated by another thread.
+        """
+        mdl = self.model()        
         # update the data model
         self.nodeCache.update()
-        
-        self.dataModel = NodeTableModel(self.nodeCache.nodes, self._headers, self)        
-        self.setModel(self.dataModel)
+        mdl.updateData(self.nodeCache.nodes)
         
 
 class NodeTableModel(QtCore.QAbstractTableModel):
@@ -269,6 +272,13 @@ class NodeTableModel(QtCore.QAbstractTableModel):
             self.arraydata.reverse()
         self.emit(QtCore.SIGNAL("layoutChanged()"))
         
+    def updateData(self, detain):
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.arraydata = detain
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        self.emit(QtCore.SIGNAL("dataChanged(const QModelIndex &, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(self.rowCount(0),self.columnCount(0)))
+        
+        
 ###########################################################################################
 ##
 ##    view delegates
@@ -320,7 +330,7 @@ class StatusDelegate(QtGui.QStyledItemDelegate):
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv) 
-    w = NodeView() 
+    w = NodeWidget(NodeCache()) 
     w.setWindowTitle('Vineyard :: Node View')
     if os.path.exists('grapes.png'):
         w.setWindowIcon(QtGui.QIcon('grapes.png'))

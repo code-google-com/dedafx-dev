@@ -14,6 +14,9 @@ from vineyard.engines.BaseEngines import EngineRegistry
 # port to use to query a node for its data as a json string
 #STATUS_PORT = 18088 
 
+# default to a short timeout on the status polling
+socket.setdefaulttimeout(1.0)
+
 cherrypy.config.update({'global':{
     'engine.autoreload.on': False,
     'log.screen': False,
@@ -52,7 +55,41 @@ class HeartbeatThread(threading.Thread):
         
     def isStopped(self):
         return self._stop.isSet()
-      
+    
+class JobQueueThread(threading.Thread):
+    """Watch and process jobs in the job queue"""
+    
+    def __init__(self):
+        super(JobQueueThread, self).__init__()
+        self._stop = threading.Event()  
+        self._working = threading.Event()
+        self.input_queue = Queue()    
+        session = Session()
+        metadata.create_all(engine)
+    
+    def run(self):       
+        while not self.isStopped(): 
+            if not self.input_queue.empty():
+                self._working.set()
+                # do something with the job
+                session = Session()
+                # update the local DB to indicate that this job is moving from queued to processing
+                
+                #
+                self._working.clear()
+
+    def stop(self):
+        self._stop.set()
+        
+    def isStopped(self):
+        return self._stop.isSet()
+    
+    def addJob(self, job):
+        self.input_queue.put(job)
+        
+    def isWorking(self):
+        return self._working.isSet()
+              
             
 class AutodiscoveryServerThread(threading.Thread):
     """Server thread to listen for other nodes"""
@@ -70,16 +107,19 @@ class AutodiscoveryServerThread(threading.Thread):
         self.known_addrs = []
         self.updateKnownAddrs()
         while 1:
-            data, addr = s.recvfrom(1024)
-            if data == 'DEDAFX-NODE':
-                # filter out known addresses
-                if addr in self.known_addrs:
-                    continue
-                else:
-                    self.queue.put(addr)
+            try:
+                data, addr = s.recvfrom(1024)
+                if data == 'DEDAFX-NODE':
+                    # filter out known addresses
+                    if addr in self.known_addrs:
+                        continue
+                    else:
+                        self.queue.put(addr)
                     
-            time.sleep(1)
-            self.updateKnownAddrs()
+                time.sleep(1)
+                self.updateKnownAddrs()
+            except:
+                pass # probably just a socket timeout
                     
                     
     def updateKnownAddrs(self):
@@ -323,7 +363,7 @@ class StatusUpdateThread(threading.Thread):
             else:
                 return 'offline'
         except Exception, e:
-            print e
+            #print e
             return 'offline'
         
     def stop(self):
@@ -351,8 +391,11 @@ class WorkerNodeHttpServer(object):
         else:
             nm = os.getenv('HOSTNAME')
             procs = 1
+        status = "waiting"
+        if __JOBQUEUE_THREAD__.isWorking():
+            status = "busy"
         return simplejson.dumps({"name":nm, 
-                                 "status":"waiting", 
+                                 "status":status, 
                                  "ip_address":str(socket.gethostbyname(socket.getfqdn())),
                                  "mac_address":"",
                                  "platform":sys.platform,
@@ -369,9 +412,49 @@ class WorkerNodeHttpServer(object):
         return simplejson.dumps({"status":"waiting"})
     status.exposed = True
     
-
+    ## some helper functions
+    # all of these will be in the servers db file.
+    # when the server boots, it should check for unfinished jobs, and try to resume them
+    def getFinishedJobs(self, max_count=100):
+        finishedJobs = []
+        return finishedJobs
+    
+    def getQueuedJobs(self):
+        queuedJobs = []
+        return queuedJobs
+    
+    def getActiveJobs(self):
+        activeJobs = []
+        return activeJobs
+    
+    def jobs(self, maxFinishedJobs=100, finished=True, active=True, queued=True):
+        """
+        
+        these are only jobs that this node has committed to manage. 
+        not all tasks need to run on this node, but could.
+        jobs must have at least one task, since a task is the real work involved with the job. job is just a grouping container.
+        
+        a job must be managed by one node, who delegates responsibility of each of the tasks of the job.
+        
+        """
+        finishedJobs = self.getFinishedJobs(maxFinishedJobs)
+        activeJobs = self.getActiveJobs()
+        queuedJobs = self.getQueuedJobs()
+        return simplejson.dumps({"jobs":{"finished":finishedJobs, "active":activeJobs, "queued":queuedJobs}})
+    jobs.exposed = True
+    
+    def submit(self, job=None):
+        if job:
+            return simplejson.dumps("success", "job submitted")
+        return simplejson.dumps("failed", "job is None! I cannot process a null job!")
+    submit.exposed = True
+    
+    def lastResult(self):
+        return "TODO: This will return the log if the render failed, or the image/movie that resulted from the last job performed"
+    lastResult.exposed = True
     
 __HEARTBEAT__ = HeartbeatThread()
+__JOBQUEUE_THREAD__ = JobQueueThread()
 
 class WorkerNodeDaemon(object):
     """the main worker node daemon class
@@ -383,7 +466,9 @@ class WorkerNodeDaemon(object):
             FarmConfig.create()
         self.autodiscover = autodiscover
         self.heartbeat = __HEARTBEAT__
-        self.heartbeat.setName('Vineyard_heartbeat')        
+        self.heartbeat.setName('Vineyard_heartbeat')  
+        
+        self.worker = __JOBQUEUE_THREAD__
     
     def __del__(self):
         try:
@@ -392,7 +477,9 @@ class WorkerNodeDaemon(object):
             pass
     
     def start(self):
-        self.heartbeat.start()
+        if self.autodiscover:
+            self.heartbeat.start()
+        self.worker.start()
         
         cherrypy.tree.mount(WorkerNodeHttpServer(), '/')
         cherrypy.engine.start()
@@ -400,7 +487,9 @@ class WorkerNodeDaemon(object):
         
     def stop(self):
         cherrypy.engine.exit()
-        self.heartbeat.stop()
+        if not self.heartbeat.isStopped():
+            self.heartbeat.stop()
+        self.worker.stop()
     
             
 def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
@@ -443,14 +532,23 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 
 
 if __name__ == '__main__':
-    
+        
     #print EngineRegistry.getEngineNames()
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("-d", "--daemon", dest="daemonize", help="daemonize a server process", action="store_true", default=False)
+    (opts, args) = parser.parse_args()
+
     
     if not FarmConfig.load():
         FarmConfig.create()
     
-    import vineyard.gui.MainWindow as farmmgr
-    farmmgr.run(sys.argv[1:])
+    if opts.daemonize:
+        daemon = WorkerNodeDaemon()
+        daemon.start()
+    else:
+        import vineyard.gui.MainWindow as farmmgr
+        farmmgr.run(sys.argv[1:])
        
         
     

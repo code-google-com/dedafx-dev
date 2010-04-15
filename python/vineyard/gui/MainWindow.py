@@ -11,6 +11,9 @@ class VineyardMainWindow(QtGui.QMainWindow):
     
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
+
+	self.nodecache = FarmManager.NodeCache()
+	
         self.center()
         self.setWindowTitle('Vineyard Manager')
         traySignal = "activated(QSystemTrayIcon::ActivationReason)"        
@@ -23,7 +26,9 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	    
 	self.setWindowIcon(icon)
 	    
-	self.trayIcon = QtGui.QSystemTrayIcon(icon, self)   
+	self.trayIcon = QtGui.QSystemTrayIcon(icon, self)  
+	
+	
 	menu = QtGui.QMenu(self)
         exitAction = menu.addAction("Exit")
         self.trayIcon.setContextMenu(menu)
@@ -37,6 +42,8 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	self.initDockWindows()
 	
 	#self.showMaximized()
+	self.showBalloonMsg("Test", "this is only a test")
+	
         
     def initMenuBar(self):
         menubar = self.menuBar()
@@ -97,7 +104,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	
 	self.node_dock = QtGui.QDockWidget("Nodes", self)
         self.node_dock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
-	nodeview = NodeView.NodeView(self)
+	nodeview = NodeView.NodeWidget(self.nodecache, self)
 	self.node_dock.setWidget(nodeview)
 	self.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.node_dock)
         self.viewmenu.addAction(self.node_dock.toggleViewAction())
@@ -105,7 +112,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	# central widget
 	#self.jobs_dock = QtGui.QDockWidget("Job Queue", self)
         #self.jobs_dock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
-	self.jobs_view = JobView.JobView(self)
+	self.jobs_view = JobView.JobWidget(self.nodecache, self)
 	#self.jobs_dock.setWidget(self.jobs_view)
 	#self.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.jobs_dock)
         #self.viewmenu.addAction(self.jobs_dock.toggleViewAction())
@@ -170,6 +177,16 @@ class VineyardMainWindow(QtGui.QMainWindow):
                 "<h3><b>DedaFX Vineyard</b></h3><br>"
 		"Render Management System for render farms and studio networks.<br><br>"
 		"Copyright 2010, DedaFX")
+	
+    def showBalloonMsg(self, title, msg, iconType=QtGui.QSystemTrayIcon.Information):
+	duration = 5 # seconds
+	# icons:
+	# 0 => no icon   == QtGui.QSystemTrayIcon.NoIcon
+	# 1 => info icon == QtGui.QSystemTrayIcon.Information
+	# 2 => Warning   == QtGui.QSystemTrayIcon.Warning
+	# 3 => Critical  == QtGui.QSystemTrayIcon.Critical
+	icon = QtGui.QSystemTrayIcon.MessageIcon(iconType)
+	self.trayIcon.showMessage(title, msg, icon, duration)
     
 def run(argv):
     app = QtGui.QApplication(argv)

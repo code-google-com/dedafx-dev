@@ -43,10 +43,10 @@ class SubmitWidget(QtGui.QWidget):
 
         
     def buildSubmitForm(self, eng):
-        print 'building the submit form for', eng
+        #print 'building the submit form for', eng
         try:
             if eng and type(eng.commandFormat) == list:
-                print 'command format found', eng.commandFormat
+                #print 'command format found', eng.commandFormat
                 
                 submit_form = QtGui.QGroupBox("Submit Options")
                 vbox = QtGui.QVBoxLayout()    

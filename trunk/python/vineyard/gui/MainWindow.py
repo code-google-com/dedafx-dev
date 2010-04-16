@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
-import sys, os
+import sys, os, time
 from PyQt4 import QtGui, QtCore
+#from PyQt4.QtWebKit import *
+
 # import all other gui
 from vineyard.gui import SystemConfiguration, NodeView, Submit, JobView
 # import all business logic
@@ -12,6 +14,8 @@ class VineyardMainWindow(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
 
+	self.showSplashScreen()
+	
 	self.nodecache = FarmManager.NodeCache()
 	
         self.center()
@@ -42,8 +46,21 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	self.initDockWindows()
 	
 	#self.showMaximized()
-	self.showBalloonMsg("Test", "this is only a test")
+	#self.showBalloonMsg("Test", "this is only a test")
+	time.sleep(4)
+	self.splash.finish(self);
+
 	
+    def showSplashScreen(self):
+	if os.path.exists("splash.png"):
+	    pic = QtGui.QPixmap("splash.png")
+	elif os.path.exists('gui/splash.png'):
+	    pic = QtGui.QPixmap("gui/splash.png")
+	    
+	# this can also be a widget
+	self.splash = QtGui.QSplashScreen(pic, QtCore.Qt.WindowStaysOnTopHint)
+	self.splash.setMask(pic.mask())
+	self.splash.show()	
         
     def initMenuBar(self):
         menubar = self.menuBar()
@@ -164,13 +181,31 @@ class VineyardMainWindow(QtGui.QMainWindow):
     
     def __icon_activated(self, reason):
         if reason == QtGui.QSystemTrayIcon.DoubleClick:
-            self.show()
+            self.showMaximized()
 	    
     def OnCheckUpdates(self):
 	QtGui.QMessageBox.about(self, "Updates", "Update check has not been implemented yet.")
     
     def OnHelp(self):
-	QtGui.QMessageBox.about(self, "Help", "Help has not been implemented yet.")
+	docstr = os.path.abspath("./")
+	bShow = False
+	if os.path.exists ( "./doc/index.html" ):
+	    docstr = os.path.abspath("./doc/index.html")
+	    bShow = True
+	# debugging farm manager?
+	elif os.path.exists ( "./doc/_build/html/index.html" ):
+	    docstr = os.path.abspath("./doc/_build/html/index.html")
+	    bShow = True
+	# debugging main window?
+	elif os.path.exists ( "../doc/_build/html/index.html" ):
+	    docstr = os.path.abspath("../doc/_build/html/index.html")
+	    bShow = True
+	if bShow:
+	    url = QtCore.QUrl.fromLocalFile(docstr)
+	    import webbrowser
+	    webbrowser.open(url.toString())
+	else:
+	    QtGui.QMessageBox.critical(self, "Help", "Help cannot find the documentation index.html file!")
     
     def OnAbout(self):
 	QtGui.QMessageBox.about(self, "About",
@@ -193,7 +228,7 @@ def run(argv):
     main_win = VineyardMainWindow() 
     for i in argv:
 	if i.lower().find('show') > -1:
-	    main_win.show()
+	    main_win.showMaximized()
     sys.exit(app.exec_())
 
 if __name__ == '__main__':    

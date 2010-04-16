@@ -1,4 +1,4 @@
-import threading, time, socket, struct, os, sys, collections
+import threading, time, socket, struct, os, sys, collections, platform
 from vineyard.models import Session, WorkerNode, metadata, engine
 from Queue import Queue
 import cherrypy, simplejson, urllib
@@ -167,7 +167,10 @@ class NodeQueueProcessingThread(threading.Thread):
                     newNode.ip_address = addr
                     
                     url = "http://"+str(addr)+":"+str(STATUS_PORT)
-                    result = simplejson.load(urllib.urlopen(url))
+                    ret = urllib.urlopen(url)
+                    #print ret.info()
+                    #print "ret=",  ret
+                    result = simplejson.load(ret)
                     
                     if result['name']:
                         newNode.name = result['name']
@@ -194,7 +197,14 @@ class NodeQueueProcessingThread(threading.Thread):
                         session.add(newNode)
                         session.commit()
                     else:
-                        print 'error with status infor from wroker node', addr, result['name'], result['mac_address']
+                        #print 'error with status-info from wroker node', addr, result['name'], result['mac_address'], result
+                        print type(result)
+                        nme = u'name'
+                        print "result[nme]", result[nme]
+                        for i in result:
+                            print result.i, type(result[i])
+                            if i == 'name':
+                                print result[i]
                     
     def stop(self):
         self._stop.set()
@@ -387,14 +397,19 @@ class WorkerNodeHttpServer(object):
     def index(self):
         if os.name == 'nt':
             nm = os.getenv('COMPUTERNAME')
+            if not nm or nm.strip() == '':
+                nm = platform.node()
             procs = os.getenv('NUMBER_OF_PROCESSORS')
         else:
             nm = os.getenv('HOSTNAME')
-            procs = 1
+            if not nm or nm.strip() == '':
+                nm = platform.node()
+            import multiprocessing            
+            procs = multiprocessing.cpu_count()
         status = "waiting"
         if __JOBQUEUE_THREAD__.isWorking():
             status = "busy"
-        return simplejson.dumps({"name":nm, 
+        ret = simplejson.dumps({"name":nm, 
                                  "status":status, 
                                  "ip_address":str(socket.gethostbyname(socket.getfqdn())),
                                  "mac_address":"",
@@ -406,6 +421,8 @@ class WorkerNodeHttpServer(object):
                                  "engines":EngineRegistry.getEngineNames(),
                                  "autodiscovery-on":(not __HEARTBEAT__.isStopped())
                                  })
+        print ret
+        return ret
     index.exposed = True
     
     def status(self):
@@ -482,8 +499,15 @@ class WorkerNodeDaemon(object):
         self.worker.start()
         
         cherrypy.tree.mount(WorkerNodeHttpServer(), '/')
-        cherrypy.engine.start()
-        cherrypy.engine.block()
+        if cherrypy.__version__[0] == '2':
+            print cherrypy.root
+            cherrypy.server.start()
+        elif cherrypy.__version__[0] == '3':
+            cherrypy.engine.start()
+            cherrypy.engine.block()
+        else:
+            raise exception, "Unhandled cherrypy version! I need version 2 or version 3!"
+        print 'cherrypy not blocking!'
         
     def stop(self):
         cherrypy.engine.exit()
@@ -532,6 +556,7 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 
 
 if __name__ == '__main__':
+    arg = ["-d"]
         
     #print EngineRegistry.getEngineNames()
     from optparse import OptionParser

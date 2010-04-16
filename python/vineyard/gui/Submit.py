@@ -2,7 +2,7 @@
 
 import sys, os
 from PyQt4 import QtGui, QtCore
-from vineyard.engines import *
+from vineyard.engines.BaseEngines import EngineRegistry
 
 class SubmitWidget(QtGui.QWidget):
     
@@ -15,10 +15,12 @@ class SubmitWidget(QtGui.QWidget):
         self.engine_cb = QtGui.QComboBox()
         self.stack = QtGui.QStackedWidget(self)
         
-        for eng in getEngineList():
+        #for eng in getEngineList():
+        for eng in EngineRegistry.getRegistry():
             self.engine_cb.addItem(eng.name)
             self.engine_cb.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-            self.stack.addWidget(self.buildSubmitForm(eng))
+            widget = self.buildSubmitForm(eng)
+            self.stack.addWidget(widget)
                                  
         hbox = QtGui.QHBoxLayout()
         englabel = QtGui.QLabel("Engines:")
@@ -31,6 +33,7 @@ class SubmitWidget(QtGui.QWidget):
         self.main_layout.addWidget(self.stack)        
         sjb = QtGui.QPushButton("Submit Job")  
         sjb.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        sjb.setStatusTip(self.tr("Submit a job to the farm"))
         self.main_layout.addWidget(sjb)
         self.main_layout.addStretch()
         self.main_layout.setMargin(2)
@@ -137,7 +140,7 @@ class SubmitWidget(QtGui.QWidget):
                                     hbox.addStretch()
                             vbox.addLayout(hbox)
                 submit_form.setLayout(vbox)
-
+                submit_form.setAcceptDrops(True)
                 return submit_form
                 
         except Exception, e:
@@ -147,7 +150,10 @@ class SubmitWidget(QtGui.QWidget):
     def submitJob(self):
         idx = self.stack.currentIndex()
         if idx > -1:
-            print 'validating job'
+            #print type(self.parent())
+            #self.parent.status('validating job')
+            self.emit(QtCore.SIGNAL("showMessage(QString)"), 'Validating job for submission')
+
             eng = EngineRegistry.getEngineByName(str(self.engine_cb.currentText()))
             #print eng.commandFormat
             for item in eng.commandFormat:
@@ -161,7 +167,7 @@ class SubmitWidget(QtGui.QWidget):
                                     # check for a string
                                     val = str(ioi[1].text())
                                     if val.strip() == '':
-                                        print 'INVALID JOB!', ioi[0], 'must be set!'
+                                        alert = QtGui.QMessageBox.critical(self, 'INVALID JOB!', str(ioi[0]) + ' must be set!')
                                         return False
                             elif len(ioi) == 3:
                                 #this is an optional item
@@ -172,7 +178,7 @@ class SubmitWidget(QtGui.QWidget):
                                         print ioi
                                         val = str(ioi[1].text())
                                         if val.strip() == '':
-                                            print 'INVALID JOB!', ioi[0], 'must be set!'
+                                            alert = QtGui.QMessageBox.critical(self, 'INVALID JOB!', str(ioi[0]) + ' must be set!')
                                             return False
                                 else: 
                                     # is this a boolean? just add it, shouldn't hurt
@@ -181,7 +187,9 @@ class SubmitWidget(QtGui.QWidget):
                                     except: pass
                                     # otherwise ignore it
         
-            print 'job submitted'
+                    self.emit(QtCore.SIGNAL("showMessage(QString)"), 'Job submitted successfully')
+                    return True
+        alert = QtGui.QMessageBox.critical(self, 'INVALID COMMAND FORMAT!', str(eng.name) + " does not have a correct command format! Submission aborted.")
         return False
             
 if __name__ == '__main__':

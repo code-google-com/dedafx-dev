@@ -123,7 +123,7 @@ class WorkerNode(BaseObject):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True, nullable=False)
-    mac_address = Column(String(15), unique=True, nullable=False)
+    mac_address = Column(String(15), nullable=False)
     ip_address = Column(String(16), unique=True, nullable=False)
     status = Column(String)
     platform = Column(String)
@@ -313,7 +313,7 @@ if __name__ == '__main__':
         else:
             assert False, "unhandled option!"
 
-    install("WorkerNodes")
+    #install("WorkerNodes")
     
     
     # create the permissions

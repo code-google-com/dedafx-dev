@@ -16,6 +16,15 @@ copy res\startService.bat dist\startService.bat
 copy res\stopService.bat dist\stopService.bat
 copy c:\Python26\lib\site-packages\Pythonwin\mfc90.dll dist\mfc90.dll
 
+:make_documentation
+rmdir /S /Q doc\_build
+mkdir dist\doc
+cd doc
+call make.bat html
+cd ..
+xcopy /S /E doc\_build\html\* dist\doc\*
+
+
 :installbuild
 makensis.exe ./dist/VineyardInstaller.nsi
 

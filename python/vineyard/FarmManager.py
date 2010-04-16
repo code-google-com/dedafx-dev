@@ -195,7 +195,12 @@ class NodeQueueProcessingThread(threading.Thread):
                         newNode.pools = result['pools']
                         
                         session.add(newNode)
-                        session.commit()
+                        
+                        try:
+                            session.commit()
+                        except IntegrityError, e:
+                            print e
+                            pass
                     else:
                         #print 'error with status-info from wroker node', addr, result['name'], result['mac_address'], result
                         print type(result)
@@ -217,6 +222,16 @@ class NodeCache(object):
     def __init__(self):
         """check for a local db, otherwise initialize it
         or, get the network db node cache, raise on fail"""
+        
+        # load plugins
+        # these are ususally additional render engines or background processing threads
+        if os.path.exists("plugins"):
+            for plugin in os.listdir("./plugins"):
+                if plugin[-2:].lower() == 'py':
+                    fn = os.path.join(os.path.abspath("./plugins"), plugin)
+                    exec(open(fn, 'r'))
+                
+        print EngineRegistry.getEngineNames()
         
         self.session = None
         self.nodes = []
@@ -418,7 +433,7 @@ class WorkerNodeHttpServer(object):
                                  "version":__version__,
                                  "cpus":procs,
                                  "priority":1,
-                                 "engines":EngineRegistry.getEngineNames(),
+                                 "engines":EngineRegistry.getEngineNames(enabled_only=True),
                                  "autodiscovery-on":(not __HEARTBEAT__.isStopped())
                                  })
         print ret
@@ -479,6 +494,11 @@ class WorkerNodeDaemon(object):
     This can be run as a daemonized process or in a windows service"""
     
     def __init__(self, autodiscover=True):
+        # load plugins
+        if os.path.exists("plugins"):
+            for plugin in os.listdir("./plugins"):
+                exec(open(os.path.join(os.path.abspath("./plugins"), plugin), 'r'))
+                
         if not FarmConfig.load():
             FarmConfig.create()
         self.autodiscover = autodiscover
@@ -558,7 +578,7 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 if __name__ == '__main__':
     arg = ["-d"]
         
-    #print EngineRegistry.getEngineNames()
+    print EngineRegistry.getEngineNames(enabled_only=True)
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option("-d", "--daemon", dest="daemonize", help="daemonize a server process", action="store_true", default=False)
@@ -573,6 +593,7 @@ if __name__ == '__main__':
         daemon.start()
     else:
         import vineyard.gui.MainWindow as farmmgr
+        
         farmmgr.run(sys.argv[1:])
        
         

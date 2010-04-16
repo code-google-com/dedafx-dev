@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import sys
 try:
     from hashlib import sha1
@@ -19,6 +21,12 @@ if os.name == 'nt':
     import win32net
     import win32netcon
     
+user_dir = os.path.expanduser("~")
+default_db_dir = user_dir + "/DedaFX/Vineyard"
+
+if not os.path.isdir(default_db_dir):
+    os.makedirs(default_db_dir)
+
 # this should refer to a centralized database for a large farm, configured at install time
 user_path = os.path.expanduser('~')
 default_db_dir = user_path + '/DedaFX/Vinyard'
@@ -252,6 +260,10 @@ def test(args):
     
 def install(args):
     print "installing the database..."
+    
+    if not os.path.isdir(default_db_dir):
+        os.makedirs(default_db_dir)
+    
     session = Session()
     metadata.create_all(engine)
     if args == 'WorkerNodes':
@@ -314,7 +326,6 @@ if __name__ == '__main__':
             assert False, "unhandled option!"
 
     #install("WorkerNodes")
-    
     
     # create the permissions
     # create default groups

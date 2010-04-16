@@ -10,6 +10,7 @@ python setup.py py2exe
 :addresources
 copy VineyardInstaller.nsi dist\VineyardInstaller.nsi
 copy gui\grapes.png dist\grapes.png
+copy gui\splash.png dist\splash.png
 copy res\header.bmp dist\header.bmp
 copy res\license.txt dist\license.txt
 copy res\startService.bat dist\startService.bat

@@ -14,10 +14,14 @@ class __EngineRegistry(object):
 	    return True
 	return False
 	
-    def getEngineNames(self):
+    def getEngineNames(self, enabled_only=False):
 	names = []
 	for e in self.__registry:
-	    names.append(e.name)
+	    if enabled_only:
+		if e.isEnabled():
+		    names.append(e.name)
+	    else:
+		names.append(e.name)
 	return names
     
     def getEngineByName(self, nme):
@@ -29,6 +33,9 @@ class __EngineRegistry(object):
 	for e in self.__registry:
 	    if e.__class__.__name__ == name:
 		return e
+	    
+    def getRegistry(self):
+	return self.__registry
 	
 EngineRegistry = __EngineRegistry()
     
@@ -93,6 +100,19 @@ class BaseEngine(object):
     def run(self):
         """must be implemented in the derived classes"""
         raise NotImplementedError('must be implemented in the derived classes')
+    
+    def buildCommandFromDict(self, cmdDict={}):
+	"""cmdDict: only the arguments for the command, not including the main executable"""
+	execstr = "self.buildCommand("
+	n = 0
+	for arg in cmdDict:
+	    execstr += str(arg) + "=" + str(cmdDict[arg]) 
+	    n += 1
+	    if n < len(cmdDict):
+		execstr += ','
+	execstr += ")"
+	exec(execstr)
+	
     
     def buildCommand(self, *args):
         """must be implemented in the derived classes"""

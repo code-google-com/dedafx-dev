@@ -20,42 +20,49 @@ class AfterEffectsCS4Engine(RenderEngine):
                 {'Continue on Missing Footage':['continue_on_missing_footage', 'bool','not-required', None]}
                 ]
     
+    commandParams = ()
+    
     def __init__(self, checkEnabled=True):
-        RenderEngine.__init__(self, version="1.0", name="After Effects CS4 Engine")
+        
         if os.name != 'nt' and os.name != 'mac':
             raise Exception, "After Effects engine currently only works on Windows!"
         if checkEnabled and not self.isEnabled():
             raise Exception, "After Effects CS4 not found on this machine!"
         
+        RenderEngine.__init__(self, version="1.0", name="After Effects CS4 Engine")
+        
     def run(self):
+        self.buildCommand()
         self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE)
         return self.process
     
-    def buildCommand(self, 
-                     project, 
-                     comp=None, 
-                     mem_usage=None,
-                     start_frame=None, 
-                     end_frame = None, 
-                     increment=None, 
-                     reuse=None,
-                     output_module_template=None,
-                     render_settings_template=None,
-                     output_path=None,
-                     log_file_path=None,
-                     close_flag=None,
-                     index_in_render_queue=None,
-                     mp_enabled=None,
-                     continue_on_missing_footage=None
-                     ):
+    def buildCommand(self):
+                     #project, 
+                     #comp=None, 
+                     #mem_usage=None,
+                     #start_frame=None, 
+                     #end_frame = None, 
+                     #increment=None, 
+                     #reuse=None,
+                     #output_module_template=None,
+                     #render_settings_template=None,
+                     #output_path=None,
+                     #log_file_path=None,
+                     #close_flag=None,
+                     #index_in_render_queue=None,
+                     #mp_enabled=None,
+                     #continue_on_missing_footage=None
+                     #):
         """Build the command-line command to execute in order to do the rendering"""
         self.command = self.app
 
-        if type(project) == str and project[-3:].lower() == 'aep':
-            self.command += " -project " + str(project)
-        else:
-            self.command = ""
-            raise Exception, "project needs to be an After Effects project file."
+        for key in kwargs:
+            if key == 'project':
+                if type(project) == str and project[-3:].lower() == 'aep':
+                    self.command += " -project " + str(project)
+                else:
+                    self.command = ""
+                    raise Exception, "project needs to be an After Effects project file."
         
         if comp:
             if type(comp) == str:
@@ -149,7 +156,13 @@ class AfterEffectsCS4Engine(RenderEngine):
                 self.command = ""
                 raise Exception, "continue_on_missing_footage needs to be an int or bool."
         
-    def isEnabled(self):
+    def isEnabled(self, force_check=False):
+        try:
+            if self.enabled != None and force_check:
+                return self.enabled
+        except:
+            pass
+        
         if os.name != 'nt' and os.name != 'mac':
             return False
         
@@ -175,6 +188,6 @@ class AfterEffectsCS4Engine(RenderEngine):
 
         
 if __name__ == '__main__':
-    #ae_cs4_engine = AfterEffectsCS4Engine()
+    ae_cs4_engine = AfterEffectsCS4Engine()
     print EngineRegistry.getEngineNames()
         

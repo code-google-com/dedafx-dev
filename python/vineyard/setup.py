@@ -1,13 +1,14 @@
 from distutils.core import setup
 import py2exe
+from vineyard import __VERSION__
 
 class Target:
     def __init__(self, **kw):
         self.__dict__.update(kw)
         # for the versioninfo resources
-        self.version = "1.0.0"
+        self.version = __VERSION__
         self.company_name = "DedaFX"
-        self.copyright = "copyright 2010"
+        self.copyright = "Copyright 2010"
         self.name = "Vineyard Renderfarm"
 
 vineyardService = Target(
@@ -20,7 +21,8 @@ vineyardService = Target(
 setup(service=[vineyardService],
       options={"py2exe" : {
           "includes": ["sip"],
-          "packages": ["sqlalchemy.databases", "sqlalchemy.dialects.sqlite"]
+          "packages": ["sqlalchemy.databases", "sqlalchemy.dialects.sqlite"],
+          "zipfile":"lib.so"
       }},
       windows=[
           {"script":"FarmManager.py",

@@ -1,0 +1,7 @@
+#summary Vineyard is a cross-platform render manager for rendering in a distributed manner across a LAN or render farm.
+
+= Introduction =
+
+Vineyard is a cross platform render management tool for managing render farms. It consists of a worker service or daemon that digests jobs submitted to it from either a render management application, or from (TODO) integrated submission forms within the authoring applications. Engine plugins can be developed to handle additional job types. Current engines include After Effects CS4 and 3Delight. Additional support for VRay, Maya and 3D Studio Max is planned. 
+
+

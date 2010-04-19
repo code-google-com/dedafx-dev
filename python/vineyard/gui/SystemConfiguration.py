@@ -83,9 +83,11 @@ class SystemConfigurationDialog(QtGui.QDialog):
         
         # save the data to the config file
         FarmConfig.create()
+        self.close()
+        
         # restart the node cache threads
         self.nodecache.restart()       
-        self.close()
+        
 
 if __name__ == '__main__':    
     app = QtGui.QApplication(sys.argv)

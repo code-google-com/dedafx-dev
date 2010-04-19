@@ -159,7 +159,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
         
     def configure(self):
         # launch the configuration dialog
-	dlg = SystemConfiguration.SystemConfigurationDialog()
+	dlg = SystemConfiguration.SystemConfigurationDialog(self.nodecache)
         dlg.setModal(True)
 	dlg.show()
 	dlg.exec_()

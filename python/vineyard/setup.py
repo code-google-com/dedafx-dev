@@ -21,8 +21,8 @@ vineyardService = Target(
 setup(service=[vineyardService],
       options={"py2exe" : {
           "includes": ["sip"],
-          "packages": ["sqlalchemy.databases", "sqlalchemy.dialects.sqlite"],
-          "zipfile":"lib.so"
+          "packages": ["sqlalchemy.databases", "sqlalchemy.dialects.sqlite"]
+          #"zipfile":"lib.so"
       }},
       windows=[
           {"script":"FarmManager.py",

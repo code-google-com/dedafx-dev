@@ -3,19 +3,23 @@
 import ConfigParser, os
 import vineyard
 
+config = ConfigParser.ConfigParser()
+
 def create():
-    config = ConfigParser.ConfigParser()
-    
-    config.add_section('Global')
+  
+    if not config.has_section('Global'):
+        config.add_section('Global')
     config.set('Global', 'autodiscovery', vineyard.AUTODISCOVERY_ON)
     
-    config.add_section('Manager')
+    if not config.has_section('Manager'):
+        config.add_section('Manager')
     config.set('Manager', 'status_update_period', vineyard.STATUS_UPDATE_PERIOD)
     
     #config.add_section('Database')
     #config.set('Database', 'server', 'localhost')
     
-    config.add_section('Ports')
+    if not config.has_section('Ports'):
+        config.add_section('Ports')
     config.set('Ports', 'autodiscovery_port', str(vineyard.AUTODISCOVERY_PORT))
     config.set('Ports', 'status_port', str(vineyard.STATUS_PORT))
     
@@ -25,20 +29,53 @@ def create():
     
 def load():    
     if os.path.exists('vineyard.cfg'):
-        config = ConfigParser.ConfigParser()
         config.read('vineyard.cfg')
         
-        vineyard.AUTODISCOVERY_ON = config.getboolean('Global', 'autodiscovery')
+        if config.has_section('Global'):
+            vineyard.AUTODISCOVERY_ON = config.getboolean('Global', 'autodiscovery')
+        else:
+            config.add_section('Global')
+            config.set('Global', 'autodiscovery', vineyard.AUTODISCOVERY_ON)
         
-        vineyard.STATUS_UPDATE_PERIOD = config.getint('Manager', 'status_update_period')
+        if config.has_section('Manager'):
+            vineyard.STATUS_UPDATE_PERIOD = config.getint('Manager', 'status_update_period')
+        else:
+            config.add_section('Manager')
+            config.set('Manager', 'status_update_period', vineyard.STATUS_UPDATE_PERIOD)
         
-        vineyard.AUTODISCOVERY_PORT = config.getint('Ports', 'autodiscovery_port')
-        vineyard.STATUS_PORT = config.getint('Ports', 'status_port')
-        
+        if config.has_section('Ports'):
+            vineyard.AUTODISCOVERY_PORT = config.getint('Ports', 'autodiscovery_port')
+            vineyard.STATUS_PORT = config.getint('Ports', 'status_port')
+        else:
+            config.add_section('Ports')
+            config.set('Ports', 'autodiscovery_port', str(vineyard.AUTODISCOVERY_PORT))
+            config.set('Ports', 'status_port', str(vineyard.STATUS_PORT))
+
+        # re-create just to make sure missing config options are added as defaults
+        with open('vineyard.cfg', 'wb') as configfile:
+            config.write(configfile)           
         return True
     else:
         create()
         return False
+    
+def setEngineData(engineName, data):
+    if os.path.exists('vineyard.cfg'):
+        config.read('vineyard.cfg')
+    if not config.has_section(engineName):
+        config.add_section(engineName)
+    for (name, val) in data:
+        config.set(engineName, name, val)
+    with open('vineyard.cfg', 'wb') as configfile:
+        config.write(configfile)
+    
+def getEngineData(engineName):
+    _data = []
+    if os.path.exists('vineyard.cfg'):
+        config.read('vineyard.cfg')        
+    if config.has_section(engineName):
+        _data = config.items(engineName)            
+    return _data
 
 if __name__ == '__main__':
     create()

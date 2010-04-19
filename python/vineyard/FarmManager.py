@@ -72,11 +72,25 @@ class JobQueueThread(threading.Thread):
         while not self.isStopped(): 
             if not self.input_queue.empty():
                 self._working.set()
-                # do something with the job
-                session = Session()
-                # update the local DB to indicate that this job is moving from queued to processing
                 
-                #
+                # do something with the job
+                job = self.input_queue.get()
+                
+                try:
+                    print "job received, processing", job["job"]
+                    eng = EngineRegistry.getEngineByName(job["job"])
+                except KeyError, e:
+                    print "Key Error", e
+                    
+                if eng:
+                    try:
+                        proc = eng.run(job)
+                        while proc.returncode == None:
+                            time.sleep(1)
+                        print 'process returncode:', proc.returncode
+                    except Exception, e:
+                        print "<ERROR>", e
+                
                 self._working.clear()
 
     def stop(self):
@@ -85,6 +99,7 @@ class JobQueueThread(threading.Thread):
     def isStopped(self):
         return self._stop.isSet()
     
+    # job is a dict {"job":"engine name", **kwargs}
     def addJob(self, job):
         self.input_queue.put(job)
         
@@ -300,8 +315,10 @@ class NodeCache(object):
         led = EngineRegistry.getLocalEngineDef(job.engine)
         if led:
             pass
-        # create a Job and Task entry in the local database
-        # find the node with the correct engine or correct target pool
+        # create a Job and Task entry in the local database, status is 'submitted'
+        # get all nodes with the correct engine, the correct pool, and sorted by priority from the local db
+        # iterate, trying to submit to each, continue on fail
+        # if all fail, report queue failure, else log job status as 'queued', and set the job's 
         # upload the local engine file, verify it's the same as the one on the target machine (as it could be a different version)
         # send the **kargs to the target machine
         
@@ -451,6 +468,7 @@ class WorkerNodeConfigurationServer(object):
     
 class WorkerNodeHttpServer(object):
     def index(self):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         if os.name == 'nt':
             nm = os.getenv('COMPUTERNAME')
             if not nm or nm.strip() == '':
@@ -477,7 +495,6 @@ class WorkerNodeHttpServer(object):
                                  "engines":EngineRegistry.getEngineNames(enabled_only=True),
                                  "autodiscovery-on":(not __HEARTBEAT__.isStopped())
                                  })
-        print ret
         return ret
     index.exposed = True
     
@@ -510,16 +527,30 @@ class WorkerNodeHttpServer(object):
         a job must be managed by one node, who delegates responsibility of each of the tasks of the job.
         
         """
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         finishedJobs = self.getFinishedJobs(maxFinishedJobs)
         activeJobs = self.getActiveJobs()
         queuedJobs = self.getQueuedJobs()
         return simplejson.dumps({"jobs":{"finished":finishedJobs, "active":activeJobs, "queued":queuedJobs}})
     jobs.exposed = True
     
-    def submit(self, job=None):
+    def submit(self, job=None, **kwargs):
+        cherrypy.response.headers['Content-Type'] = 'application/json'
         if job:
-            return simplejson.dumps("success", "job submitted")
-        return simplejson.dumps("failed", "job is None! I cannot process a null job!")
+            eng = EngineRegistry.getEngineByName(job)
+            print job, eng
+            if eng:
+                try:
+                    params = {"job":job}
+                    params = dict(params, **kwargs)
+                    print params
+                    __JOBQUEUE_THREAD__.addJob(params)
+                    return simplejson.dumps({'status':"success", 'description':"job submitted", 'kwargs':kwargs})
+                except Exception, e:
+                    return simplejson.dumps({'status':"failed", 'description':"Exception thrown during submittal. " + str(e), 'kwargs':kwargs})
+            else:
+                return simplejson.dumps({'status':"failed", 'description':"Engine not supported for this job type.", 'kwargs':kwargs})
+        return simplejson.dumps({'status':"failed", 'description':"job is None! I cannot process a null job!", 'kwargs':kwargs})
     submit.exposed = True
     
     def lastResult(self):
@@ -537,8 +568,14 @@ class WorkerNodeDaemon(object):
     def __init__(self):
         # load plugins
         if os.path.exists("plugins"):
+            sys.path.append(os.path.abspath("./plugins"))
             for plugin in os.listdir("./plugins"):
-                exec(open(os.path.join(os.path.abspath("./plugins"), plugin), 'r'))
+                if plugin[-2:].lower() == 'py' or plugin[-3:].lower() == 'pyc':
+                    __import__(str(plugin.split('.')[0]))
+               # if plugin[-2:].lower() == 'py':
+                    
+                    #fn = os.path.join(os.path.abspath("./plugins"), plugin)
+                    #exec(open(fn, 'r'))
                 
         if not FarmConfig.load():
             FarmConfig.create()
@@ -561,7 +598,7 @@ class WorkerNodeDaemon(object):
         
         cherrypy.tree.mount(WorkerNodeHttpServer(), '/')
         if cherrypy.__version__[0] == '2':
-            print cherrypy.root
+            #print cherrypy.root
             cherrypy.server.start()
         elif cherrypy.__version__[0] == '3':
             cherrypy.engine.start()
@@ -618,7 +655,7 @@ def daemonizeThisProcess(stdin='/dev/null', stdout='/dev/null', stderr='/dev/nul
 if __name__ == '__main__':
     arg = ["-d"]
         
-    print EngineRegistry.getEngineNames(enabled_only=True)
+    #print EngineRegistry.getEngineNames(enabled_only=True)
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option("-d", "--daemon", dest="daemonize", help="daemonize a server process", action="store_true", default=False)

@@ -68,8 +68,8 @@ class Task(BaseObject):
     engine = Column(String)
     status = Column(String)
     targetPool = Column(String)
-    progress = Column(Float)      
-
+    progress = Column(Float)     
+    uuid = Column(String)
     
     submittedTime = Column(DateTime, default=datetime.datetime.now)
     startTime = Column(DateTime)
@@ -86,10 +86,7 @@ class Task(BaseObject):
         
     def __repr__(self):
         return "<Task ('%s','%s','%s')>" % (self.name, self.engine, self.progress)
-    
-    #def run(self):
-    #    """ run this task """
-    #    pass
+
         
 # This is the association table for the many-to-many relationship between
 # job and tasks - this is, the memberships.
@@ -108,12 +105,14 @@ class Job(BaseObject):
     name = Column(Unicode(255), unique=True, nullable=False)
     priority = Column(Integer)
     owner = Column(String)
+    uuid = Column(String)
     
     submitted = Column(DateTime, default=datetime.datetime.now)
     starttime = Column(DateTime)
     finishtime = Column(DateTime)
     
     origin = Column(String)
+    current_node = Column(String)
     progress = Column(String)
     
     status = Column(String)
@@ -124,11 +123,7 @@ class Job(BaseObject):
     def __repr__(self):
         return "<Job ('%s','%s')>" % (self.name, self.priority)
     
-    #def run(self):
-        #""" run all of the sub-tasks, alert owner """
-        #for task in tasks:
-            #task.run()
-    
+  
 
 class WorkerNode(BaseObject):
     

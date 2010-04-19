@@ -55,12 +55,16 @@ class BaseEngine(object):
     
     # empty command dictionary
     _cmdFormat = []
+    __version = ''
+    __cmd = ''
+    __name = ''
+    __filename = ''
     
-    def __init__(self, version="1.0", cmd="", name = "Base Engine", filename=None):
+    def __init__(self, version="1.0", cmd="", name="Base Engine", filename=None):
         self.__version = str(version)
         self.__cmd = str(cmd)
 	self.__name = str(name)
-	self.__filename == filename
+	self.__filename = filename
 	EngineRegistry.register(self)	
     
     def getVersion(self):
@@ -117,24 +121,11 @@ class BaseEngine(object):
 	
     commandFormat = property(getCmdFormat, setCmdFormat)
     
-    def run(self):
+    def run(self, kwargs):
         """must be implemented in the derived classes"""
         raise NotImplementedError('must be implemented in the derived classes')
     
-    def buildCommandFromDict(self, cmdDict={}):
-	"""cmdDict: only the arguments for the command, not including the main executable"""
-	execstr = "self.buildCommand("
-	n = 0
-	for arg in cmdDict:
-	    execstr += str(arg) + "=" + str(cmdDict[arg]) 
-	    n += 1
-	    if n < len(cmdDict):
-		execstr += ','
-	execstr += ")"
-	exec(execstr)
-	
-    
-    def buildCommand(self, *args):
+    def buildCommand(self, kwargs):
         """must be implemented in the derived classes"""
         raise NotImplementedError('must be implemented in the derived classes')
     

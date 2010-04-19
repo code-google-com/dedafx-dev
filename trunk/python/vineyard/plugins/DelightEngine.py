@@ -10,7 +10,7 @@ class DelightEngine(RenderEngine):
         if checkEnabled and not self.isEnabled():
             raise Exception, "3Delight not found on this machine!"
         
-        RenderEngine.__init__(self, version="1.0", name="3Delight Engine")
+        RenderEngine.__init__(self, version="1.0", name="3Delight Engine", filename=__file__)
         
     def run(self):
         self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE)

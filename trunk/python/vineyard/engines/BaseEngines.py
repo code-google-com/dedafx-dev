@@ -36,6 +36,17 @@ class __EngineRegistry(object):
 	    
     def getRegistry(self):
 	return self.__registry
+    
+    def getLocalEngineDef(self, engine_name):
+	eng = self.getEngineByName(engine_name)
+	if eng:
+	    if os.path.exists("plugins"):
+		for plugin in os.listdir("./plugins"):
+		    if plugin[-2:].lower() == 'py':
+			fn = os.path.join(os.path.abspath("./plugins"), plugin)
+			#exec(open(fn, 'r'))
+			if fn == eng.filename:
+			    return fn
 	
 EngineRegistry = __EngineRegistry()
     
@@ -45,10 +56,11 @@ class BaseEngine(object):
     # empty command dictionary
     _cmdFormat = []
     
-    def __init__(self, version="1.0", cmd="", name = "Base Engine"):
+    def __init__(self, version="1.0", cmd="", name = "Base Engine", filename=None):
         self.__version = str(version)
         self.__cmd = str(cmd)
 	self.__name = str(name)
+	self.__filename == filename
 	EngineRegistry.register(self)	
     
     def getVersion(self):
@@ -66,6 +78,14 @@ class BaseEngine(object):
         self.__cmd = str(cmd)
     
     command = property(getCmd, setCmd)
+    
+    def getFilename(self):
+        return self.__filename
+    
+    def setFilename(self, fname):
+        self.__filename = str(fname)
+    
+    filename = property(getFilename, setFilename)
     
     def getName(self):
 	return self.__name

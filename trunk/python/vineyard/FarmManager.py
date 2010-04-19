@@ -232,9 +232,9 @@ class NodeCache(object):
                     fn = os.path.join(os.path.abspath("./plugins"), plugin)
                     exec(open(fn, 'r'))
                 
-        print EngineRegistry.getEngineNames()
+        #print EngineRegistry.getEngineNames()
         
-        print AUTODISCOVERY_PORT, STATUS_PORT
+        #print AUTODISCOVERY_PORT, STATUS_PORT
         
         self.session = None
         self.nodes = []
@@ -258,18 +258,56 @@ class NodeCache(object):
              
         self.nodeQueue = Queue()
         self.initializeLocalNodeCache()
-        
+       
         
     def __del__(self):
-        self.nq.stop()
-        self.autodisc.stop()
+        try:
+            self.nq.stop()
+        except:
+            pass
+        
+        try:
+            self.autodisc.stop()
+        except:
+            pass
+        
+        try:
+            self.statusupdate.stop()
+        except:
+            pass
+        
+    def restart(self):
+        try:
+            self.autodisc.stop()
+        except: 
+            pass
+        self.autodiscover()
+        
+        # restart the status update thread
         self.statusupdate.stop()
+        self.statusupdate.start()
         
     def autodiscover(self):
         if vineyard.AUTODISCOVERY_ON:
             self.autodisc.start()
         else:
-            self.autodisc.stop()
+            try:
+                self.autodisc.stop()
+            except: pass    
+            
+    def submitJob(self, job, **kwargs):
+        # get the local file of the engine def
+        led = EngineRegistry.getLocalEngineDef(job.engine)
+        if led:
+            pass
+        # create a Job and Task entry in the local database
+        # find the node with the correct engine or correct target pool
+        # upload the local engine file, verify it's the same as the one on the target machine (as it could be a different version)
+        # send the **kargs to the target machine
+        
+        # 
+        pass
+        
             
     def update(self):
         """This updates the memory array with the data from the database"""

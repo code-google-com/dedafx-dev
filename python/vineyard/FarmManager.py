@@ -3,6 +3,7 @@ from vineyard.models import Session, WorkerNode, metadata, engine
 from Queue import Queue
 import cherrypy, simplejson, urllib
 from vineyard import __version__, AUTODISCOVERY_PORT, STATUS_PORT, FarmConfig
+import vineyard
 import vineyard.engines
 from vineyard.engines.BaseEngines import EngineRegistry
 
@@ -233,6 +234,8 @@ class NodeCache(object):
                 
         print EngineRegistry.getEngineNames()
         
+        print AUTODISCOVERY_PORT, STATUS_PORT
+        
         self.session = None
         self.nodes = []
         
@@ -262,8 +265,8 @@ class NodeCache(object):
         self.autodisc.stop()
         self.statusupdate.stop()
         
-    def autodiscover(self, on=True):
-        if on:
+    def autodiscover(self):
+        if vineyard.AUTODISCOVERY_ON:
             self.autodisc.start()
         else:
             self.autodisc.stop()
@@ -329,12 +332,13 @@ class NodeCache(object):
                 return
             
 class StatusUpdateThread(threading.Thread):
+    """This thread is used by the Vineyard Manager to keep the local database up to date with the system.
+    It only runs while the manager gui is running, either full window or in the taskbar."""
     
-    def __init__(self, period=5):
+    def __init__(self):
         threading.Thread.__init__(self)
         self.session = Session()
         metadata.create_all(engine)
-        self.period = period
         self._stop = threading.Event()
     
     def run(self):
@@ -342,7 +346,7 @@ class StatusUpdateThread(threading.Thread):
             try:
                 self.__updateAllNodes()
             except: pass
-            time.sleep(self.period)
+            time.sleep(vineyard.STATUS_UPDATE_PERIOD)
             
     def __updateAllNodes(self):
         for node in self.session.query(WorkerNode).all(): 
@@ -352,7 +356,7 @@ class StatusUpdateThread(threading.Thread):
             
     def __update(self, node):
         try:
-            url = "http://"+str(node.ip_address)+":"+str(STATUS_PORT)
+            url = "http://"+str(node.ip_address)+":"+str(vineyard.STATUS_PORT)
             result = simplejson.load(urllib.urlopen(url))
             
             if result['name']: 
@@ -388,7 +392,6 @@ class StatusUpdateThread(threading.Thread):
             else:
                 return 'offline'
         except Exception, e:
-            #print e
             return 'offline'
         
     def stop(self):
@@ -401,7 +404,7 @@ class StatusUpdateThread(threading.Thread):
 class WorkerNodeConfigurationServer(object):
     """used to set configuration settings for a worker node
     
-    Can only be run locally by anyone, or remotely by an administrator."""
+    (TODO:) Can only be run locally by anyone, or remotely by an administrator."""
     
     def index(self):
         return ""
@@ -493,7 +496,7 @@ class WorkerNodeDaemon(object):
     
     This can be run as a daemonized process or in a windows service"""
     
-    def __init__(self, autodiscover=True):
+    def __init__(self):
         # load plugins
         if os.path.exists("plugins"):
             for plugin in os.listdir("./plugins"):
@@ -501,7 +504,7 @@ class WorkerNodeDaemon(object):
                 
         if not FarmConfig.load():
             FarmConfig.create()
-        self.autodiscover = autodiscover
+        
         self.heartbeat = __HEARTBEAT__
         self.heartbeat.setName('Vineyard_heartbeat')  
         
@@ -514,7 +517,7 @@ class WorkerNodeDaemon(object):
             pass
     
     def start(self):
-        if self.autodiscover:
+        if vineyard.AUTODISCOVERY_ON:
             self.heartbeat.start()
         self.worker.start()
         
@@ -527,7 +530,6 @@ class WorkerNodeDaemon(object):
             cherrypy.engine.block()
         else:
             raise exception, "Unhandled cherrypy version! I need version 2 or version 3!"
-        print 'cherrypy not blocking!'
         
     def stop(self):
         cherrypy.engine.exit()

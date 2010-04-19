@@ -2,6 +2,8 @@
 
 import sys, os
 from PyQt4 import QtGui, QtCore
+from vineyard import FarmConfig
+import vineyard
 
 class SystemConfigurationDialog(QtGui.QDialog):
     
@@ -17,6 +19,20 @@ class SystemConfigurationDialog(QtGui.QDialog):
         
         
         vbox = QtGui.QVBoxLayout()
+        
+        cb = QtGui.QCheckBox("Autodiscovery", self)
+        vbox.addWidget(cb)
+        cb.setChecked(vineyard.AUTODISCOVERY_ON)
+        
+        hbox = QtGui.QHBoxLayout()
+        lbl = QtGui.QLabel("Status Update Period", self)
+        spin1 = QtGui.QSpinBox(self)
+        spin1.setMinimum(1)
+        spin1.setMaximum(1000)
+        spin1.setValue(vineyard.STATUS_UPDATE_PERIOD)
+        hbox.addWidget(lbl)
+        hbox.addWidget(spin1)
+        vbox.addLayout(hbox)
         
         okCancel = QtGui.QDialogButtonBox(self)
         okCancel.setOrientation(QtCore.Qt.Horizontal)

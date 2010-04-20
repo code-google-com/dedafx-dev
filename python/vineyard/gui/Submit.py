@@ -47,104 +47,108 @@ class SubmitWidget(QtGui.QWidget):
         
     def buildSubmitForm(self, eng):
         #print 'building the submit form for', eng
-        try:
-            if eng and type(eng.commandFormat) == list:
-                #print 'command format found', eng.commandFormat
+        #try:
+            #if eng and type(eng.commandFormat) == list:
+                ##print 'command format found', eng.commandFormat
                 
-                submit_form = QtGui.QGroupBox("Submit Options")
-                vbox = QtGui.QVBoxLayout()    
+                #submit_form = QtGui.QGroupBox("Submit Options")
+                #vbox = QtGui.QVBoxLayout()    
                 
-                #def addLOItem(isi0, le):
-                    #if type(isi0) == str:
-                        #isi0 = [isi0, le]
-                    #elif type(isi0) == list and len(isi0) > 1:
-                        #isi0 = [isi0[0], le]                
+                ##def addLOItem(isi0, le):
+                    ##if type(isi0) == str:
+                        ##isi0 = [isi0, le]
+                    ##elif type(isi0) == list and len(isi0) > 1:
+                        ##isi0 = [isi0[0], le]                
 
-                def makeCbEnabler(control):
-                    cb = QtGui.QCheckBox()
-                    self.connect(cb, QtCore.SIGNAL("stateChanged(int)"), control.setEnabled)
-                    control.setEnabled(cb.isChecked())
-                    return cb
+                #def makeCbEnabler(control):
+                    #cb = QtGui.QCheckBox()
+                    #self.connect(cb, QtCore.SIGNAL("stateChanged(int)"), control.setEnabled)
+                    #control.setEnabled(cb.isChecked())
+                    #return cb
                     
-               #def formatLO(isi0, le, hbox, bReq):                
-                    #le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
-                    #addLOItem(isi0, le)
-                    #hbox.addWidget(le)
-                    #if not bReq: 
-                        #cb = makeCbEnabler(le, isi0)
-                        #hbox.addWidget(le)
+               ##def formatLO(isi0, le, hbox, bReq):                
+                    ##le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+                    ##addLOItem(isi0, le)
+                    ##hbox.addWidget(le)
+                    ##if not bReq: 
+                        ##cb = makeCbEnabler(le, isi0)
+                        ##hbox.addWidget(le)
                 
-                for item in eng.commandFormat:
-                    if type(item) == dict:
-                        for subitem in item:
-                            hbox = QtGui.QHBoxLayout()
-                            label = QtGui.QLabel(str(subitem))
-                            label.setAlignment(QtCore.Qt.AlignRight)
-                            hbox.addWidget(label)
+                #for item in eng.commandFormat:
+                    #if type(item) == dict:
+                        #for subitem in item:
+                            #hbox = QtGui.QHBoxLayout()
+                            #label = QtGui.QLabel(str(subitem))
+                            #label.setAlignment(QtCore.Qt.AlignRight)
+                            #hbox.addWidget(label)
                             
-                            bReq = False
-                            if len(item[subitem]) >= 3:
-                                bReq = str(item[subitem][2]).lower() == 'required'
+                            #bReq = False
+                            #if len(item[subitem]) >= 3:
+                                #bReq = str(item[subitem][2]).lower() == 'required'
                                 
-                            if len(item[subitem]) >= 4 and type(item[subitem][3]) == list and len(item[subitem][3]) > 1:
-                                    le = QtGui.QComboBox(submit_form)
-                                    le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
-                                    if type(item[subitem][0]) == str:
-                                        item[subitem][0] = [item[subitem][0], le]
-                                    elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
-                                        item[subitem][0] = [item[subitem][0][0], le]
-                                    hbox.addWidget(le)
-                                    if not bReq: 
-                                        cb = makeCbEnabler(le)
-                                        if type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
-                                            item[subitem][0] = [item[subitem][0][0], item[subitem][0][1], cb]
-                                        hbox.addWidget(cb)
-                            elif len(item[subitem]) >= 2:
-                                # this item is a text field for manual entry, or a spinner, if this is a int or float
-                                if item[subitem][1] == 'str' or item[subitem][1] == 'float':
-                                    # text field
-                                    le = QtGui.QLineEdit(submit_form)
-                                    le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
-                                    if type(item[subitem][0]) == str:
-                                        item[subitem][0] = [item[subitem][0], le]
-                                    elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
-                                        item[subitem][0] = [item[subitem][0][0], le]
-                                    hbox.addWidget(le)
-                                    if not bReq: 
-                                        cb = makeCbEnabler(le)
-                                        if type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
-                                            item[subitem][0] = [item[subitem][0][0], item[subitem][0][1], cb]
-                                        hbox.addWidget(cb)
-                                elif item[subitem][1] == 'int':
-                                    # int spinner
-                                    le = QtGui.QSpinBox(submit_form)
-                                    le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
-                                    if type(item[subitem][0]) == str:
-                                        item[subitem][0] = [item[subitem][0], le]
-                                    elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
-                                        item[subitem][0] = [item[subitem][0][0], le]
-                                    hbox.addWidget(le)
-                                    if not bReq: 
-                                        cb = makeCbEnabler(le)
-                                        if type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
-                                            item[subitem][0] = [item[subitem][0][0], item[subitem][0][1], cb]
-                                        hbox.addWidget(cb)
-                                elif item[subitem][1] == 'bool':
-                                    # checkbox
-                                    le = QtGui.QCheckBox(submit_form)
-                                    if type(item[subitem][0]) == str:
-                                        item[subitem][0] = [item[subitem][0], le]
-                                    elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
-                                        item[subitem][0] = [item[subitem][0][0], le]
-                                    hbox.addWidget(le)
-                                    hbox.addStretch()
-                            vbox.addLayout(hbox)
-                submit_form.setLayout(vbox)
-                submit_form.setAcceptDrops(True)
-                return submit_form
+                            #if len(item[subitem]) >= 4 and type(item[subitem][3]) == list and len(item[subitem][3]) > 1:
+                                    #le = QtGui.QComboBox(submit_form)
+                                    #le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+                                    #if type(item[subitem][0]) == str:
+                                        #item[subitem][0] = [item[subitem][0], le]
+                                    #elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
+                                        #item[subitem][0] = [item[subitem][0][0], le]
+                                    #hbox.addWidget(le)
+                                    #if not bReq: 
+                                        #cb = makeCbEnabler(le)
+                                        #if type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
+                                            #item[subitem][0] = [item[subitem][0][0], item[subitem][0][1], cb]
+                                        #hbox.addWidget(cb)
+                            #elif len(item[subitem]) >= 2:
+                                ## this item is a text field for manual entry, or a spinner, if this is a int or float
+                                #if item[subitem][1] == 'str' or item[subitem][1] == 'float':
+                                    ## text field
+                                    #le = QtGui.QLineEdit(submit_form)
+                                    #le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+                                    #if type(item[subitem][0]) == str:
+                                        #item[subitem][0] = [item[subitem][0], le]
+                                    #elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
+                                        #item[subitem][0] = [item[subitem][0][0], le]
+                                    #hbox.addWidget(le)
+                                    #if not bReq: 
+                                        #cb = makeCbEnabler(le)
+                                        #if type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
+                                            #item[subitem][0] = [item[subitem][0][0], item[subitem][0][1], cb]
+                                        #hbox.addWidget(cb)
+                                #elif item[subitem][1] == 'int':
+                                    ## int spinner
+                                    #le = QtGui.QSpinBox(submit_form)
+                                    #le.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+                                    #if type(item[subitem][0]) == str:
+                                        #item[subitem][0] = [item[subitem][0], le]
+                                    #elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
+                                        #item[subitem][0] = [item[subitem][0][0], le]
+                                    #hbox.addWidget(le)
+                                    #if not bReq: 
+                                        #cb = makeCbEnabler(le)
+                                        #if type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
+                                            #item[subitem][0] = [item[subitem][0][0], item[subitem][0][1], cb]
+                                        #hbox.addWidget(cb)
+                                #elif item[subitem][1] == 'bool':
+                                    ## checkbox
+                                    #le = QtGui.QCheckBox(submit_form)
+                                    #if type(item[subitem][0]) == str:
+                                        #item[subitem][0] = [item[subitem][0], le]
+                                    #elif type(item[subitem][0]) == list and len(item[subitem][0]) > 1:
+                                        #item[subitem][0] = [item[subitem][0][0], le]
+                                    #hbox.addWidget(le)
+                                    #hbox.addStretch()
+                            #vbox.addLayout(hbox)
+                #submit_form.setLayout(vbox)
+                #submit_form.setAcceptDrops(True)
+                #return submit_form
                 
-        except Exception, e:
-            print e
+        #except Exception, e:
+            #print e
+        win = eng.buildGui()
+        if win:
+            return win
+        else:
             return QtGui.QWidget(self)
         
     def submitJob(self):

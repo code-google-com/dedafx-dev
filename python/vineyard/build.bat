@@ -16,6 +16,7 @@ copy res\license.txt dist\license.txt
 copy res\startService.bat dist\startService.bat
 copy res\stopService.bat dist\stopService.bat
 copy c:\Python26\lib\site-packages\Pythonwin\mfc90.dll dist\mfc90.dll
+xcopy /S /E doc\_build\html\* dist\doc\*
 
 :make_documentation
 rmdir /S /Q doc\_build
@@ -23,7 +24,7 @@ mkdir dist\doc
 cd doc
 call make.bat html
 cd ..
-xcopy /S /E doc\_build\html\* dist\doc\*
+xcopy /S /E plugins\*.pyc dist\plugins\*
 
 
 :installbuild

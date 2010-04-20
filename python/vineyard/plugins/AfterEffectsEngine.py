@@ -1,8 +1,8 @@
 import subprocess, os, sys, unittest, time
 from vineyard.engines.BaseEngines import *
-import vineyard.FarmConfig
+from vineyard import FarmConfig
 
-class AfterEffectsCS4Engine(vineyard.engines.BaseEngines.RenderEngine):
+class AfterEffectsCS4Engine(RenderEngine):
     
     commandFormat = [{'Project':['project', 'str', 'required']},
                 {'Composition':['comp', 'str','not-required', None]},
@@ -23,32 +23,10 @@ class AfterEffectsCS4Engine(vineyard.engines.BaseEngines.RenderEngine):
     
     commandParams = ()
     
-    def __init__(self, checkEnabled=True):
-        self.enabled = False
+    def __init__(self):
+        RenderEngine.__init__(self, version="1.0", name="After Effects CS4 Engine")  
         
-        if os.name != 'nt' and os.name != 'mac':
-            raise Exception, "After Effects engine currently only works on Windows!"
-        if checkEnabled:
-            if self.isEnabled():
-                self.enabled = True
-            #else:
-            #    raise Exception, "After Effects CS4 disabled on this machine!"
-        
-        vineyard.engines.BaseEngines.RenderEngine.__init__(self, version="1.0", name="After Effects CS4 Engine", filename=__file__)
-        
-        vineyard.FarmConfig.setEngineData(self.name, [("app",self.app), ("enabled",self.enabled)])
-        
-    def run(self, kwargs):
-        """ This is a standard run process for an engine, just build the command and use Popen"""
-        try:
-            if self.isEnabled():
-                self.buildCommand(kwargs)
-                if self.command and self.command != '':
-                    self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE)
-                    return self.process
-        except Exception, e:
-            print "<ERROR>", e
-    
+   
     def buildCommand(self, kwargs):
                      #project, 
                      #comp=None, 
@@ -184,21 +162,19 @@ class AfterEffectsCS4Engine(vineyard.engines.BaseEngines.RenderEngine):
                     raise Exception, "continue_on_missing_footage needs to be an int or bool."
         
     def isEnabled(self, force_check=False):
-        try:
-            if self.enabled != None and force_check:
-                return self.enabled
-        except:
-            pass
+        if self.enabled != None and not force_check:
+            return self.enabled
         
-        if os.name != 'nt' and os.name != 'mac':
+        if os.name not in ('nt','mac'):
             return False
         
         # check the config file first!
-        _data = vineyard.FarmConfig.getEngineData(self.name)
+        _data = FarmConfig.getEngineData(self.name)
         
         if len(_data) == 0:
             prog_dir = os.environ['ProgramFiles']
             if os.name == 'nt':
+                # TODO: check the registry to see if it's installed
                 for d in [ 'Adobe', 'Adobe After Effects CS4', 'Support Files' ]:
                     prog_dir = os.path.join(prog_dir, d)
             elif os.name == 'mac':
@@ -234,9 +210,6 @@ class AfterEffectsCS4Engine(vineyard.engines.BaseEngines.RenderEngine):
                 return self.enabled
         return False
         
-    def kill(self):
-        if self.isEnabled and self.process and self.process.returncode == None:
-            self.process.kill()
 
 try:
     AfterEffectsCS4Engine()

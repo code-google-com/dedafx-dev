@@ -1,4 +1,5 @@
 import sys
+from vineyard import FarmConfig
 
 class __EngineRegistry(object):
     
@@ -18,8 +19,10 @@ class __EngineRegistry(object):
 	names = []
 	for e in self.__registry:
 	    if enabled_only:
-		if e.isEnabled():
-		    names.append(e.name)
+		try:
+		    if e.isEnabled():
+			names.append(e.name)
+		except: pass
 	    else:
 		names.append(e.name)
 	return names
@@ -38,6 +41,7 @@ class __EngineRegistry(object):
 	return self.__registry
     
     def getLocalEngineDef(self, engine_name):
+	"""This function won't work properly when run as a windows service"""
 	eng = self.getEngineByName(engine_name)
 	if eng:
 	    if os.path.exists("plugins"):
@@ -53,19 +57,27 @@ EngineRegistry = __EngineRegistry()
 
 class BaseEngine(object):
     
+    """This is the base engine class for all processing engines.
+    
+    To implement, derive a class from this class or a sub-class and override the buildCommand function. Most sub-classes will need to create their own isEnabled function that checks for the presence of the executable, and the buildGui function to enable users to submit a job to the Farm."""
+    
     # empty command dictionary
     _cmdFormat = []
     __version = ''
     __cmd = ''
     __name = ''
-    __filename = ''
     
-    def __init__(self, version="1.0", cmd="", name="Base Engine", filename=None):
+    def __init__(self, version="1.0", cmd="", name="Base Engine", checkEnabled=True):
+	self.enabled = None         
+        if checkEnabled:
+            if self.isEnabled():
+                self.enabled = True
         self.__version = str(version)
         self.__cmd = str(cmd)
 	self.__name = str(name)
-	self.__filename = filename
-	EngineRegistry.register(self)	
+	self.process = None
+	EngineRegistry.register(self)
+	FarmConfig.setEngineData(self.name, [("app",self.app), ("enabled",self.enabled)])
     
     def getVersion(self):
         return self.__version
@@ -122,20 +134,35 @@ class BaseEngine(object):
     commandFormat = property(getCmdFormat, setCmdFormat)
     
     def run(self, kwargs):
-        """must be implemented in the derived classes"""
-        raise NotImplementedError('must be implemented in the derived classes')
+        """ This is a standard run process for an engine, just build the command and use Popen"""
+        try:
+            if self.isEnabled():
+                self.buildCommand(kwargs)
+                if self.command and self.command != '':
+                    self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE)
+                    return self.process
+	    else:
+		return None
+        except Exception, e:
+            print "<ERROR>", e
+	    return None
     
     def buildCommand(self, kwargs):
         """must be implemented in the derived classes"""
         raise NotImplementedError('must be implemented in the derived classes')
     
-    def isEnabled(self):
-        """must be implemented in the derived classes"""
-        raise NotImplementedError('must be implemented in the derived classes')
+    def isEnabled(self, force_check=False):
+        """should be implemented in the derived classes"""
+        return True
     
     def kill(self):
-        """must be implemented in the derived classes"""
-        raise NotImplementedError('must be implemented in the derived classes')
+        """may be implemented in the derived classes"""
+        if self.isEnabled and self.process and self.process.returncode == None:
+            self.process.kill()
+	    
+    def buildGui(self):
+	"""should be implemented in the derived classes for the submit panel in the manager gui. This should return a top-level QWidget for use in the submit panel of the Manager gui."""
+        return None
     
     
 class RenderEngine(BaseEngine):

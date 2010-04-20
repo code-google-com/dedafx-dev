@@ -6,6 +6,12 @@ from vineyard import __version__, AUTODISCOVERY_PORT, STATUS_PORT, FarmConfig
 import vineyard
 import vineyard.engines
 from vineyard.engines.BaseEngines import EngineRegistry
+if os.name == 'nt':
+    try:
+        from _winreg import *
+    except:
+        pass
+
 
 #__version__ = "1.0.0"
 
@@ -50,6 +56,7 @@ class HeartbeatThread(threading.Thread):
             # broadcast magic packet on port  
             s.sendto("DEDAFX-NODE", (host, AUTODISCOVERY_PORT))
             time.sleep(3) 
+            self._stop.wait(1.0)
 
     def stop(self):
         self._stop.set()
@@ -92,6 +99,8 @@ class JobQueueThread(threading.Thread):
                         print "<ERROR>", e
                 
                 self._working.clear()
+            
+            self._stop.wait(5.0)
 
     def stop(self):
         self._stop.set()
@@ -122,7 +131,7 @@ class AutodiscoveryServerThread(threading.Thread):
         s.bind(("", AUTODISCOVERY_PORT))
         self.known_addrs = []
         self.updateKnownAddrs()
-        while 1:
+        while not self.isStopped():
             try:
                 data, addr = s.recvfrom(1024)
                 if data == 'DEDAFX-NODE':
@@ -136,6 +145,8 @@ class AutodiscoveryServerThread(threading.Thread):
                 self.updateKnownAddrs()
             except:
                 pass # probably just a socket timeout
+            
+            self._stop.wait(3.0)
                     
                     
     def updateKnownAddrs(self):
@@ -168,7 +179,7 @@ class NodeQueueProcessingThread(threading.Thread):
         """process the queue, if it has any items in it"""
         session = Session()
         metadata.create_all(engine)
-        while 1:
+        while not self.isStopped():
             if not self.queue.empty():
                 (addr, port) = self.queue.get()
                 session = Session()
@@ -226,12 +237,56 @@ class NodeQueueProcessingThread(threading.Thread):
                             print result.i, type(result[i])
                             if i == 'name':
                                 print result[i]
-                    
+            
+            self._stop.wait(1.0)
+        
     def stop(self):
         self._stop.set()
         
     def isStopped(self):
         return self._stop.isSet()
+    
+def loadPlugins():
+    if os.path.exists("./plugins"):
+        p = os.path.abspath("./plugins")
+    else:
+        if os.name == 'nt':
+            # we might be running as a service. 
+            # check the windows registry for the install directory and pre-pend the plugin path with the install path
+            try:
+                #from _winreg import *
+                aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
+                aKey = OpenKey(aReg, r"SOFTWARE\DedaFX\Vineyard") 
+                val = EnumValue(aKey, 0)
+                pf = str(val[1])
+                if val[0] == 'InstallDir' and os.path.exists(os.path.abspath(os.path.join(pf, "plugins"))):
+                    p = os.path.abspath(os.path.join(pf, "plugins"))
+                else:
+                    return False
+            except:
+                return False
+        else:
+            return False
+        
+    #print p
+    sys.path.append(p)
+    pa = os.listdir(p)
+    paa = []
+    def fn2mod(f): 
+        if (os.path.splitext(f)[1][:3].lower() == '.py') : 
+            return os.path.splitext(f)[0] 
+    for i in pa:
+        if i[0] != '.':
+            n = fn2mod(i)
+            if n and not n in paa:
+                paa.append(n)
+    #print paa
+    for plugin in paa:
+        try:
+            print 'loading', plugin
+            __import__(plugin)
+        except Exception, e:
+            print '<error>', e, plugin
                 
 class NodeCache(object): 
     
@@ -241,16 +296,8 @@ class NodeCache(object):
         
         # load plugins
         # these are ususally additional render engines or background processing threads
-        if os.path.exists("plugins"):
-            sys.path.append(os.path.abspath("./plugins"))
-            for plugin in os.listdir("./plugins"):
-                if plugin[-2:].lower() == 'py' or plugin[-3:].lower() == 'pyc':
-                    __import__(str(plugin.split('.')[0]))
-                        
-        #print EngineRegistry.getEngineNames()
-        
-        #print AUTODISCOVERY_PORT, STATUS_PORT
-        
+        loadPlugins()
+                               
         self.session = None
         self.nodes = []
         
@@ -300,6 +347,7 @@ class NodeCache(object):
         
         # restart the status update thread
         self.statusupdate.stop()
+        time.sleep(5)
         self.statusupdate.start()
         
     def autodiscover(self):
@@ -402,11 +450,15 @@ class StatusUpdateThread(threading.Thread):
                 self.__updateAllNodes()
             except: pass
             time.sleep(vineyard.STATUS_UPDATE_PERIOD)
+            self._stop.wait(1.0)
+        print 'status update thread stopping.'
             
     def __updateAllNodes(self):
+        starttime = time.clock()
         for node in self.session.query(WorkerNode).all(): 
             node.status = self.__update(node)
         self.session.commit()
+        print 'status update timer:', time.clock()-starttime
             
             
     def __update(self, node):
@@ -468,6 +520,7 @@ class WorkerNodeConfigurationServer(object):
     
 class WorkerNodeHttpServer(object):
     def index(self):
+        starttime = time.clock()
         cherrypy.response.headers['Content-Type'] = 'application/json'
         if os.name == 'nt':
             nm = os.getenv('COMPUTERNAME')
@@ -483,6 +536,23 @@ class WorkerNodeHttpServer(object):
         status = "waiting"
         if __JOBQUEUE_THREAD__.isWorking():
             status = "busy"
+        pluginFolder = ""
+        if os.path.exists("./plugins"):
+            pluginFolder = os.path.abspath("./plugins")
+        else:
+            if os.name == 'nt':
+                # we might be running as a service. 
+                # check the windows registry for the install directory and pre-pend the plugin path with the install path
+                try:
+                    #from _winreg import *
+                    aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
+                    aKey = OpenKey(aReg, "SOFTWARE\\DedaFX\\Vineyard") 
+                    val = EnumValue(aKey, 0)
+                    pf = str(val[1])
+                    if val[0] == 'InstallDir' and os.path.exists(os.path.abspath(os.path.join(pf, "plugins"))):
+                        pluginFolder = os.path.abspath(os.path.join(pf, "plugins"))
+                except Exception, e:
+                    pluginFolder = e
         ret = simplejson.dumps({"name":nm, 
                                  "status":status, 
                                  "ip_address":str(socket.gethostbyname(socket.getfqdn())),
@@ -493,7 +563,10 @@ class WorkerNodeHttpServer(object):
                                  "cpus":procs,
                                  "priority":1,
                                  "engines":EngineRegistry.getEngineNames(enabled_only=True),
-                                 "autodiscovery-on":(not __HEARTBEAT__.isStopped())
+                                 "autodiscovery-on":(not __HEARTBEAT__.isStopped()),
+                                 "debug":{"calltime":(time.clock()-starttime), 
+                                          "plugin_folder":pluginFolder,
+                                          "current_dir":os.getcwd()}
                                  })
         return ret
     index.exposed = True
@@ -567,15 +640,7 @@ class WorkerNodeDaemon(object):
     
     def __init__(self):
         # load plugins
-        if os.path.exists("plugins"):
-            sys.path.append(os.path.abspath("./plugins"))
-            for plugin in os.listdir("./plugins"):
-                if plugin[-2:].lower() == 'py' or plugin[-3:].lower() == 'pyc':
-                    __import__(str(plugin.split('.')[0]))
-               # if plugin[-2:].lower() == 'py':
-                    
-                    #fn = os.path.join(os.path.abspath("./plugins"), plugin)
-                    #exec(open(fn, 'r'))
+        loadPlugins()
                 
         if not FarmConfig.load():
             FarmConfig.create()
@@ -600,14 +665,20 @@ class WorkerNodeDaemon(object):
         if cherrypy.__version__[0] == '2':
             #print cherrypy.root
             cherrypy.server.start()
-        elif cherrypy.__version__[0] == '3':
+        elif cherrypy.__version__[:3] == '3.0':
+            cherrypy.server.quickstart()
+            cherrypy.engine.start(blocking=False)
+        elif cherrypy.__version__[:3] == '3.1':
             cherrypy.engine.start()
             cherrypy.engine.block()
         else:
             raise exception, "Unhandled cherrypy version! I need version 2 or version 3!"
         
     def stop(self):
-        cherrypy.engine.exit()
+        if cherrypy.__version__[:3] == '3.1':
+            cherrypy.engine.exit()            
+        else:
+            cherrypy.server.stop()
         if not self.heartbeat.isStopped():
             self.heartbeat.stop()
         self.worker.stop()
@@ -659,7 +730,7 @@ if __name__ == '__main__':
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option("-d", "--daemon", dest="daemonize", help="daemonize a server process", action="store_true", default=False)
-    (opts, args) = parser.parse_args()
+    (opts, args) = parser.parse_args(arg)
 
     
     if not FarmConfig.load():

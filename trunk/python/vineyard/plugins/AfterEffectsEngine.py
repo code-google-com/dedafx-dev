@@ -238,7 +238,10 @@ class AfterEffectsCS4Engine(vineyard.engines.BaseEngines.RenderEngine):
         if self.isEnabled and self.process and self.process.returncode == None:
             self.process.kill()
 
-AfterEffectsCS4Engine()
+try:
+    AfterEffectsCS4Engine()
+except Exception, e:
+    print '<error>', e
 
 #if __name__ == '__main__':
 #    ae_cs4_engine = AfterEffectsCS4Engine()

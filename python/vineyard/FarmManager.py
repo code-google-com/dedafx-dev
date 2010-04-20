@@ -242,11 +242,11 @@ class NodeCache(object):
         # load plugins
         # these are ususally additional render engines or background processing threads
         if os.path.exists("plugins"):
+            sys.path.append(os.path.abspath("./plugins"))
             for plugin in os.listdir("./plugins"):
-                if plugin[-2:].lower() == 'py':
-                    fn = os.path.join(os.path.abspath("./plugins"), plugin)
-                    exec(open(fn, 'r'))
-                
+                if plugin[-2:].lower() == 'py' or plugin[-3:].lower() == 'pyc':
+                    __import__(str(plugin.split('.')[0]))
+                        
         #print EngineRegistry.getEngineNames()
         
         #print AUTODISCOVERY_PORT, STATUS_PORT

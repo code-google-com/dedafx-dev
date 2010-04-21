@@ -1,4 +1,4 @@
-__all__ = ["FarmManager", "models", "WakeOnLan"]
+__all__ = ["FarmManager", "models", "WakeOnLan", "FarmConfig"]
 
 __version__ = "1.0.0"
 __VERSION__ = __version__

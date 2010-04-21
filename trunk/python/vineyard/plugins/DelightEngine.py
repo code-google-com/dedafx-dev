@@ -1,18 +1,21 @@
-import subprocess, os, sys, unittest, time
+import os
 from vineyard.engines.BaseEngines import *
 
 class DelightEngine(RenderEngine):
     
     def __init__(self):   
-        RenderEngine.__init__(self, version="1.0", name="3Delight Engine")
+        RenderEngine.__init__(self, 
+                              version="1.0", 
+                              name="3Delight Engine",
+                              osNames=('nt', 'posix', 'mac'),
+                              validExecutables=("renderdl.exe")
+                              )
+        self.commandFormat = {'ribs':[],
+                              'frames': None,                              
+                              'crop': None,
+                              'resolution': None}
     
-    def buildCommand(self, kwargs):
-                     #ribs, 
-                     #frames=None, 
-                     #crop=None, 
-                     #resolution=None,
-                     #threads=0,
-                     #procs=0):
+    def buildCommand(self, kwargs=self.commandFormat):
         """Build the command-line command to execute in order to do the rendering"""
         self.command = ""
         try:
@@ -82,28 +85,31 @@ class DelightEngine(RenderEngine):
         
             
         
-    def isEnabled(self, setApp=False):
-        if os.name != 'nt' and os.name != 'posix' and os.name != 'mac':
-            return False
-        try:
-            prog_dir = os.environ['DELIGHT']
-            prog_dir = os.path.join(prog_dir,'bin')
-            if os.path.isdir(prog_dir):
-                app = os.path.join(prog_dir, 'renderdl.exe')
-                if os.path.exists(app):
-                    self.app = app
-                    return True
-        except: pass
-        return False
+    def isEnabled(self, force_check=False):
+        ret = RenderEngine.isEnabled(self, force_check)
+        
+        if ret == None:
+            self.enabled = False
+            self.app = ''
+            try:
+                pth = os.environ['DELIGHT']
+                pth = os.path.join(prog_dir,'bin')
+                if os.path.isdir(pth):
+                    for app in self.executables:
+                        a = os.path.join(pth, app)
+                        if os.path.exists(a):
+                            self.app = a
+                            self.enabled = True
+                            break
+            except: 
+                self.enabled = False
+            
+        self.commitConfig()
+        return self.enabled
             
         
-    def kill(self):
-        if self.process and self.process.returncode == None:
-            self.process.kill()
+
 
 DelightEngine()      
-#if __name__ == '__main__':
-    #delight_engine = DelightEngine()
-    #print EngineRegistry.getEngineNames()
 
         

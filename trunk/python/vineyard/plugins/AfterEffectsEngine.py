@@ -1,49 +1,35 @@
-import subprocess, os, sys, unittest, time
+import os
 from vineyard.engines.BaseEngines import *
-from vineyard import FarmConfig
+if os.name == 'nt':
+    from _winreg import *
 
 class AfterEffectsCS4Engine(RenderEngine):
-    
-    commandFormat = [{'Project':['project', 'str', 'required']},
-                {'Composition':['comp', 'str','not-required', None]},
-                {'Memory Usage':['mem_usage', 'str','not-required', None]},
-                {'Start Frame':['start_frame','int','not-required', None]},
-                {'End Frame':['end_frame', 'int','not-required', None]},
-                {'Increment':['increment','int','not-required', None]},
-                {'Reuse':['reuse', 'bool','not-required', None]},
-                {'Output Module Template':['output_module_template', 'str','not-required', None]},
-                {'Render Settings Template':['render_settings_template', 'str','not-required', None]},
-                {'Output Path':['output_path', 'str','not-required', None]},
-                {'Log File Path':['log_file_path', 'str','not-required', None]},
-                {'Close Flag':['close_flag', 'str','not-required', [None, ""]]},
-                {'Index in Render Queue':['index_in_render_queue', 'str','not-required', None]},
-                {'MP Enabled':['mp_enabled', 'str','not-required', None]},
-                {'Continue on Missing Footage':['continue_on_missing_footage', 'bool','not-required', None]}
-                ]
-    
-    commandParams = ()
-    
+         
     def __init__(self):
-        RenderEngine.__init__(self, version="1.0", name="After Effects CS4 Engine")  
+        RenderEngine.__init__(self, 
+                              version="1.0", 
+                              name="After Effects CS4 Engine",
+                              osNames=('nt'),
+                              validExecutables=("aerender.exe"))  
+        
+        self.commandFormat = {'project':'',
+                              'comp': None,
+                              'mem_usage': None,
+                              'start_frame': None,
+                              'end_frame': None,
+                              'increment': None,
+                              'reuse': None,
+                              'output_module_template': None,
+                              'render_settings_template': None,
+                              'output_path': None,
+                              'log_file_path': None,
+                              'close_flag': None,
+                              'index_in_render_queue':None,
+                              'mp_enabled':None,
+                              'continue_on_missing_footage':None}
         
    
-    def buildCommand(self, kwargs):
-                     #project, 
-                     #comp=None, 
-                     #mem_usage=None,
-                     #start_frame=None, 
-                     #end_frame = None, 
-                     #increment=None, 
-                     #reuse=None,
-                     #output_module_template=None,
-                     #render_settings_template=None,
-                     #output_path=None,
-                     #log_file_path=None,
-                     #close_flag=None,
-                     #index_in_render_queue=None,
-                     #mp_enabled=None,
-                     #continue_on_missing_footage=None
-                     #):
+    def buildCommand(self, kwargs=self.commandFormat):
         """Build the command-line command to execute in order to do the rendering"""
         self.command = ""
         try:
@@ -162,61 +148,33 @@ class AfterEffectsCS4Engine(RenderEngine):
                     raise Exception, "continue_on_missing_footage needs to be an int or bool."
         
     def isEnabled(self, force_check=False):
-        if self.enabled != None and not force_check:
-            return self.enabled
+        ret = RenderEngine.isEnabled(self, force_check)
         
-        if os.name not in ('nt','mac'):
-            return False
-        
-        # check the config file first!
-        _data = FarmConfig.getEngineData(self.name)
-        
-        if len(_data) == 0:
-            prog_dir = os.environ['ProgramFiles']
-            if os.name == 'nt':
-                # TODO: check the registry to see if it's installed
-                for d in [ 'Adobe', 'Adobe After Effects CS4', 'Support Files' ]:
-                    prog_dir = os.path.join(prog_dir, d)
-            elif os.name == 'mac':
-                prog_dir = os.path.join(proj_dir, 'Adobe After Effects CS4')
-            if os.path.isdir(prog_dir):
-                app = os.path.join(prog_dir, 'aerender.exe')
-                if os.path.exists(app):
-                    self.app = app
-                    self.enabled = True
-                    return True
-                else:
-                    return False
-            else:
-                return False
-        else:
-            # this engine is configured!
-            # _data should be a list of (name, value) pairs
-            bRet = False
-            for (name, value) in _data:
-                if name == 'app':
-                    if os.path.exists(value):
-                        if len(value) > 12 and value[-12:] == "aerender.exe":
-                            self.app = value
-                            self.enabled = True
-                        else:
-                            raise Exception, "App path of " + str(self.name) + " is invalid: " + str(value) + " needs to refer to aerender.exe!"
-                    else:
-                        raise Exception, "App path of " + str(self.name) + " does not exist: " + str(value)
-                if name == 'enabled':
-                    self.enabled = bool(value)
-                    bRet = True
-            if bRet:
-                return self.enabled
-        return False
+        if ret == None:
+            self.enabled = False
+            self.app = ''
+            if os.name == 'nt':                
+                try:
+                    aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
+                    aKey = OpenKey(aReg, r"SOFTWARE\Adobe\After Effects\9.0") 
+                    for i in range(1024):
+                        val = EnumValue(aKey, i)
+                        pth = str(val[1])
+                        if val[0] == 'InstallPath' and os.path.isdir(pth):
+                            # it's installed, get the full app path and return True
+                            for app in self.executables:
+                                a = os.path.join(pth, app)
+                                if os.path.exists(a):
+                                    self.app = a
+                                    self.enabled = True
+                                    break
+                except Exception, e:
+                    self.enabled = False
+                    
+        self.commitConfig()
+        return self.enabled
         
 
-try:
-    AfterEffectsCS4Engine()
-except Exception, e:
-    print '<error>', e
+AfterEffectsCS4Engine()
 
-#if __name__ == '__main__':
-#    ae_cs4_engine = AfterEffectsCS4Engine()
-#    print EngineRegistry.getEngineNames()
         

@@ -162,7 +162,9 @@ class BaseEngine(object):
             if self.isEnabled():
                 self.buildCommand(kwargs)
                 if self.command and self.command != '':
-                    self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE)
+		    # I should start a thread to watch the process and store the stdout into a queue for this task
+		    # then return the queue so the parent thread can run multiple subprocess if required while not blocking
+                    self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     return self.process
 	    else:
 		return None

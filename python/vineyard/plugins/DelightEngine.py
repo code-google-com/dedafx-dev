@@ -15,8 +15,10 @@ class DelightEngine(RenderEngine):
                               'crop': None,
                               'resolution': None}
     
-    def buildCommand(self, kwargs=self.commandFormat):
+    def buildCommand(self, kwargs=None):
         """Build the command-line command to execute in order to do the rendering"""
+        if kwargs == None:
+            kwargs = self.commandFormat
         self.command = ""
         try:
             if not self.isEnabled():

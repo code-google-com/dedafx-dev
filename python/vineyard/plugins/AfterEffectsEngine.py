@@ -29,8 +29,10 @@ class AfterEffectsCS4Engine(RenderEngine):
                               'continue_on_missing_footage':None}
         
    
-    def buildCommand(self, kwargs=self.commandFormat):
+    def buildCommand(self, kwargs=None):
         """Build the command-line command to execute in order to do the rendering"""
+        if kwargs == None:
+            kwargs = self.commandFormat
         self.command = ""
         try:
             if not self.isEnabled():

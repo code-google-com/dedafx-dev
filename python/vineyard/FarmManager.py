@@ -741,7 +741,7 @@ if __name__ == '__main__':
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option("-d", "--daemon", dest="daemonize", help="daemonize a server process", action="store_true", default=False)
-    (opts, args) = parser.parse_args(arg)
+    (opts, args) = parser.parse_args()
 
     
     if not FarmConfig.load():

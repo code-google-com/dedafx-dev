@@ -159,6 +159,7 @@ class AfterEffectsCS4Engine(RenderEngine):
                 try:
                     aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
                     aKey = OpenKey(aReg, r"SOFTWARE\Adobe\After Effects\9.0") 
+                    bPathFound = False
                     for i in range(1024):
                         val = EnumValue(aKey, i)
                         pth = str(val[1])
@@ -169,8 +170,13 @@ class AfterEffectsCS4Engine(RenderEngine):
                                 if os.path.exists(a):
                                     self.app = a
                                     self.enabled = True
+                                    bPathFound = True
                                     break
+                        if bPathFound:
+                            break
                 except Exception, e:
+                    # if you're here, then there was a problem itrating over the registry keys. it's probably not installed..
+                    # the user always has the option of setting the app directory in the configuration file...
                     self.enabled = False
                     
         self.commitConfig()

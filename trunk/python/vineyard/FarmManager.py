@@ -12,16 +12,13 @@ if os.name == 'nt':
     except:
         pass
 
-
-#__version__ = "1.0.0"
-
-# default ports
-# port to use for autodiscovery
-#AUTODISCOVERY_PORT = 13331
-# port to use to query a node for its data as a json string
-#STATUS_PORT = 18088 
+# this is an ugly global, but useful when the domain of the subnet is outside the control of the user
+# when the worker node tries to get it's ip address, this global means that the node will use the socket.getfqdn() in retrieving the ip
+# otherwise it will use, and continue to use socket.gethostname() in ip retrieval
+__useFullyQualifiedDomainName__ = True
 
 # default to a short timeout on the status polling
+#(TODO) set this with a configuration setting
 socket.setdefaulttimeout(1.0)
 
 cherrypy.config.update({'global':{
@@ -287,6 +284,7 @@ def loadPlugins():
             __import__(plugin)
         except Exception, e:
             print '<error>', e, plugin
+            raise
                 
 class NodeCache(object): 
     
@@ -553,9 +551,22 @@ class WorkerNodeHttpServer(object):
                         pluginFolder = os.path.abspath(os.path.join(pf, "plugins"))
                 except Exception, e:
                     pluginFolder = e
+        ip = ''
+        
+        global __useFullyQualifiedDomainName__
+        try:
+            if __useFullyQualifiedDomainName__:
+                ip = str(socket.gethostbyname(socket.getfqdn()))
+                __useFullyQualifiedDomainName__ = True
+        except: 
+            __useFullyQualifiedDomainName__ = False
+            try:
+                ip = str(socket.gethostbyname(socket.gethostname()))
+            except: pass
+                    
         ret = simplejson.dumps({"name":nm, 
                                  "status":status, 
-                                 "ip_address":str(socket.gethostbyname(socket.getfqdn())),
+                                 "ip_address":ip,
                                  "mac_address":"",
                                  "platform":sys.platform,
                                  "pools":"",

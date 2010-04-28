@@ -76,18 +76,20 @@ class BaseEngine(object):
     def __init__(self, version="1.0", cmd="", name="Base Engine", 
 		 checkEnabled=True, osNames=('nt','posix','mac'),
 		 validExecutables=()):
-	self.enabled = None         
-        if checkEnabled:
-            if self.isEnabled():
-                self.enabled = True
+	self.enabled = None          
 	self.__osNames = osNames
         self.__version = str(version)
         self.__cmd = str(cmd)
 	self.__name = str(name)
 	self.__execs = validExecutables
 	self.process = None
+	if checkEnabled:
+            if self.isEnabled():
+                self.enabled = True
 	EngineRegistry.register(self)
-	FarmConfig.setEngineData(self.name, [("app",self.app), ("enabled",self.enabled)])
+	
+	# bad place for this, because self.app is not set yet
+	FarmConfig.setEngineData(self.__name, [("app",self.app), ("enabled",self.enabled)])
     
     def getVersion(self):
         return self.__version
@@ -98,7 +100,12 @@ class BaseEngine(object):
     version = property(getVersion, setVersion)
     
     def getExecs(self):
-	return self.__execs
+	if type(self.__execs) == str:
+	    return (self.__execs,)
+	elif type(self.__execs) == tuple:
+	    return self.__execs
+	return ()
+    
     
     def setExecs(self, execs):
 	raise Exception, "Can only set the executables in the subclass initialization!"
@@ -136,10 +143,13 @@ class BaseEngine(object):
 	self.__app = ""
         if issubclass(self.__class__, BaseEngine):
 	    if type(app) == str and os.path.exists(app) and os.path.split(app)[1] in self.__execs:
-		app = os.path.abs
+		app = os.path.abspath(app)
 		self.__app = str(app)
 	    else:
-		raise Exception, "Invalid app! " + str(app) + "  Valid apps are:" + str(self.__execs)
+		if app == '':
+		    self.__app = app
+		else:
+		    raise Exception, "Invalid app! " + str(app) + "  Valid apps are:" + str(self.__execs)
         else:
             raise Exception, "Only derived classes can set the application for the engine!"
     

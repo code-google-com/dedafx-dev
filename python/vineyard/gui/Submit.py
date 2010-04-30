@@ -2,13 +2,14 @@
 
 import sys, os
 from PyQt4 import QtGui, QtCore
-from vineyard.engines.BaseEngines import EngineRegistry
+from vineyard.engines.BaseEngines import BaseEngine, EngineRegistry
 
 class SubmitWidget(QtGui.QWidget):
     
-    def __init__(self, *args):
+    def __init__(self, nodecache, *args):
         QtGui.QWidget.__init__(self, *args)
         
+        self.nodecache = nodecache
         self.main_layout = QtGui.QVBoxLayout()
         
         engGroup = QtGui.QGroupBox("Available Engines")
@@ -43,10 +44,30 @@ class SubmitWidget(QtGui.QWidget):
         
         bsf = lambda e: self.buildSubmitForm(EngineRegistry.getEngineByName(self.engine_cb.currentText()))
         self.connect(self.engine_cb, QtCore.SIGNAL("currentIndexChanged(int)"), self.stack.setCurrentIndex)
+        
+    def sizeHint(self):
+        return QtCore.QSize(450, 100)
 
         
     def buildSubmitForm(self, eng):
-        #print 'building the submit form for', eng
+        if eng and issubclass(eng.__class__, BaseEngine):
+            print 'building the submit form for', str(eng.name)
+            
+            win = eng.buildGui()
+            if win and issubclass(win.__class__, QtGui.QWidget):
+                print 'engine has a submit form'
+                submit_form = QtGui.QGroupBox("Submit Options")
+                vbox = QtGui.QVBoxLayout()
+                vbox.setMargin(0)
+                vbox.addWidget(win)
+                submit_form.setLayout(vbox)
+                submit_form.setAcceptDrops(True)
+                return submit_form
+            else:
+                print '<warn> %s does not have a submit form defined!' % (eng.name)
+        else:
+            raise Exception, 'In order to build a submit form, the engine needs to be defined and a subclass of BaseEngine!'
+        
         #try:
             #if eng and type(eng.commandFormat) == list:
                 ##print 'command format found', eng.commandFormat
@@ -145,56 +166,60 @@ class SubmitWidget(QtGui.QWidget):
                 
         #except Exception, e:
             #print e
-        win = eng.buildGui()
-        if win:
-            return win
-        else:
-            return QtGui.QWidget(self)
+        #win = eng.buildGui()
+        #if win:
+            #return win
+        #else:
+        return QtGui.QWidget(self)
         
     def submitJob(self):
         idx = self.stack.currentIndex()
         if idx > -1:
             #print type(self.parent())
             #self.parent.status('validating job')
-            self.emit(QtCore.SIGNAL("showMessage(QString)"), 'Validating job for submission')
+            #self.emit(QtCore.SIGNAL("showMessage(QString)"), 'Validating job for submission')
 
             eng = EngineRegistry.getEngineByName(str(self.engine_cb.currentText()))
-            #print eng.commandFormat
-            for item in eng.commandFormat:
-                if type(item) == dict:
-                    for subitem in item:
-                        ioi = item[subitem][0]
-                        if type(ioi) == list:
-                            if len(ioi) == 2:
-                                #this is a required item, validate the field
-                                if item[subitem][1] == 'str':
-                                    # check for a string
-                                    val = str(ioi[1].text())
-                                    if val.strip() == '':
-                                        alert = QtGui.QMessageBox.critical(self, 'INVALID JOB!', str(ioi[0]) + ' must be set!')
-                                        return False
-                            elif len(ioi) == 3:
-                                #this is an optional item
-                                if ioi[2].isChecked():
-                                    #validate this field
-                                    if item[subitem][1] == 'str':
-                                        # check for a string
-                                        print ioi
-                                        val = str(ioi[1].text())
-                                        if val.strip() == '':
-                                            alert = QtGui.QMessageBox.critical(self, 'INVALID JOB!', str(ioi[0]) + ' must be set!')
-                                            return False
-                                else: 
-                                    # is this a boolean? just add it, shouldn't hurt
-                                    try:
-                                        val = ioi[2].isChecked()
-                                    except: pass
-                                    # otherwise ignore it
+            if eng and issubclass(eng.__class__, BaseEngine):
+                if not self.nodecache.submitJob(eng):
+                    alert = QtGui.QMessageBox.critical(self, 'Job Not Submitted','None of the render nodes accepted your job submission! Check your parameters and try again.')
+                
+            ##print eng.commandFormat
+            #for item in eng.commandFormat:
+                #if type(item) == dict:
+                    #for subitem in item:
+                        #ioi = item[subitem][0]
+                        #if type(ioi) == list:
+                            #if len(ioi) == 2:
+                                ##this is a required item, validate the field
+                                #if item[subitem][1] == 'str':
+                                    ## check for a string
+                                    #val = str(ioi[1].text())
+                                    #if val.strip() == '':
+                                        #alert = QtGui.QMessageBox.critical(self, 'INVALID JOB!', str(ioi[0]) + ' must be set!')
+                                        #return False
+                            #elif len(ioi) == 3:
+                                ##this is an optional item
+                                #if ioi[2].isChecked():
+                                    ##validate this field
+                                    #if item[subitem][1] == 'str':
+                                        ## check for a string
+                                        #print ioi
+                                        #val = str(ioi[1].text())
+                                        #if val.strip() == '':
+                                            #alert = QtGui.QMessageBox.critical(self, 'INVALID JOB!', str(ioi[0]) + ' must be set!')
+                                            #return False
+                                #else: 
+                                    ## is this a boolean? just add it, shouldn't hurt
+                                    #try:
+                                        #val = ioi[2].isChecked()
+                                    #except: pass
+                                    ## otherwise ignore it
         
-                    self.emit(QtCore.SIGNAL("showMessage(QString)"), 'Job submitted successfully')
-                    return True
-        alert = QtGui.QMessageBox.critical(self, 'INVALID COMMAND FORMAT!', str(eng.name) + " does not have a correct command format! Submission aborted.")
-        return False
+                    #self.emit(QtCore.SIGNAL("showMessage(QString)"), 'Job submitted successfully')
+                    #return True
+        #alert = QtGui.QMessageBox.critical(self, 'INVALID COMMAND FORMAT!', str(eng.name) + " does not have a correct command format! Submission aborted.")
+        #return False
             
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv) 

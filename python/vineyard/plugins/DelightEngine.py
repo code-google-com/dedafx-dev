@@ -95,7 +95,7 @@ class DelightEngine(RenderEngine):
             self.app = ''
             try:
                 pth = os.environ['DELIGHT']
-                pth = os.path.join(prog_dir,'bin')
+                pth = os.path.join(pth,'bin')
                 if os.path.isdir(pth):
                     for app in self.executables:
                         a = os.path.join(pth, app)

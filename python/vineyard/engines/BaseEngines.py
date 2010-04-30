@@ -1,5 +1,7 @@
 import sys, os
 from vineyard import FarmConfig
+from PyQt4 import QtGui, QtCore
+import subprocess
 
 class __EngineRegistry(object):
     
@@ -174,7 +176,7 @@ class BaseEngine(object):
                 if self.command and self.command != '':
 		    # I should start a thread to watch the process and store the stdout into a queue for this task
 		    # then return the queue so the parent thread can run multiple subprocess if required while not blocking
-                    self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                    self.process = subprocess.Popen(self.command) #, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     return self.process
 	    else:
 		return None
@@ -216,15 +218,31 @@ class BaseEngine(object):
 	"""call this in a subclass isEnabled function after the engine is set up, so the info is cached in the ini file"""
 	FarmConfig.setEngineData( self.name, [('app',self.app),('enabled',self.enabled)] )
 	
-    
     def kill(self):
         """may be implemented in the derived classes"""
         if self.isEnabled and self.process and self.process.returncode == None:
             self.process.kill()
 	    
     def buildGui(self):
-	"""should be implemented in the derived classes for the submit panel in the manager gui. This should return a top-level QWidget for use in the submit panel of the Manager gui."""
+	"""should be implemented in the derived classes for the submit panel in the manager gui. 
+	This should return a top-level QWidget for use in the submit panel of the Manager gui."""
         return None
+    
+    def getCmdDict(self):
+	"""subclasses should implement this to format a command dict to submit to the farm"""
+	return dict()
+       
+    @classmethod
+    def makeCbEnabled(cls, control, defaultState):
+	""" utility function to create and link a checkbox control that enables and disables the control param 
+	
+	param: control must be a subclass of QWidget"""
+	cb = QtGui.QCheckBox()
+	control.connect(cb, QtCore.SIGNAL("stateChanged(int)"), control.setEnabled)
+	cb.setChecked(defaultState)
+	control.setEnabled(cb.isChecked())
+	return cb
+
     
     
 class RenderEngine(BaseEngine):

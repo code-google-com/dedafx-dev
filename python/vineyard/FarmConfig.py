@@ -10,6 +10,7 @@ def create():
     if not config.has_section('Global'):
         config.add_section('Global')
     config.set('Global', 'autodiscovery', str(vineyard.AUTODISCOVERY_ON))
+    config.set('Global', 'use_fqdn', str(vineyard.USE_FQDN))
     
     if not config.has_section('Manager'):
         config.add_section('Manager')
@@ -37,20 +38,27 @@ def load():
             return
         
         if config.has_section('Global'):
-            vineyard.AUTODISCOVERY_ON = config.getboolean('Global', 'autodiscovery')
+            if config.has_option('Global', 'autodiscovery'):
+                vineyard.AUTODISCOVERY_ON = config.getboolean('Global', 'autodiscovery')
+            if config.has_option('Global', 'use_fqdn'):
+                vineyard.USE_FQDN = config.getboolean('Global', 'use_fqdn')
         else:
             config.add_section('Global')
             config.set('Global', 'autodiscovery', str(vineyard.AUTODISCOVERY_ON))
+            config.set('Global', 'use_fqdn', str(vineyard.USE_FQDN))
         
         if config.has_section('Manager'):
-            vineyard.STATUS_UPDATE_PERIOD = config.getint('Manager', 'status_update_period')
+            if config.has_option('Manager', 'status_update_period'):
+                vineyard.STATUS_UPDATE_PERIOD = config.getint('Manager', 'status_update_period')
         else:
             config.add_section('Manager')
             config.set('Manager', 'status_update_period', str(vineyard.STATUS_UPDATE_PERIOD))
         
         if config.has_section('Ports'):
-            vineyard.AUTODISCOVERY_PORT = config.getint('Ports', 'autodiscovery_port')
-            vineyard.STATUS_PORT = config.getint('Ports', 'status_port')
+            if config.has_option('Ports', 'autodiscovery_port'):
+                vineyard.AUTODISCOVERY_PORT = config.getint('Ports', 'autodiscovery_port')
+            if config.has_option('Ports', 'status_port'):
+                vineyard.STATUS_PORT = config.getint('Ports', 'status_port')
         else:
             config.add_section('Ports')
             config.set('Ports', 'autodiscovery_port', str(vineyard.AUTODISCOVERY_PORT))

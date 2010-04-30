@@ -120,6 +120,7 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	self.setCorner(QtCore.Qt.BottomRightCorner, QtCore.Qt.RightDockWidgetArea)
 	
 	self.node_dock = QtGui.QDockWidget("Nodes", self)
+	self.node_dock.setObjectName('Nodes')
         self.node_dock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
 	nodeview = NodeView.NodeWidget(self.nodecache, self)
 	self.node_dock.setWidget(nodeview)
@@ -139,14 +140,16 @@ class VineyardMainWindow(QtGui.QMainWindow):
 	self.setCentralWidget(self.jobs_view)
 	
 	self.logs_dock = QtGui.QDockWidget("Logs", self)
+	self.logs_dock.setObjectName('Logs')
         self.logs_dock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
 	self.logs_dock.setWidget(QtGui.QTextEdit(self))
 	self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.logs_dock)
         self.viewmenu.addAction(self.logs_dock.toggleViewAction())
 	
 	self.submit_dock = QtGui.QDockWidget("Submit", self)
+	self.submit_dock.setObjectName('Submit')
         self.submit_dock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.TopDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
-	submit_view = Submit.SubmitWidget(self)
+	submit_view = Submit.SubmitWidget(self.nodecache, self)
 	self.submit_dock.setWidget(submit_view)
 	self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.submit_dock)
         self.viewmenu.addAction(self.submit_dock.toggleViewAction())
@@ -167,8 +170,19 @@ class VineyardMainWindow(QtGui.QMainWindow):
     def closeFromMenu(self):
 	self.okayToClose = True
 	self.close()
+	
+    def restore(self):
+	settings = QtCore.QSettings("DedaFX", "Vineyard");
+	self.restoreGeometry(settings.value("geometry").toByteArray());
+	self.restoreState(settings.value("windowState").toByteArray());
     
     def closeEvent(self, event):
+	# save the window states
+	settings = QtCore.QSettings("DedaFX", "Vineyard")
+	settings.setValue("geometry", self.saveGeometry())
+	settings.setValue("windowState", self.saveState())
+
+	
         if self.okayToClose: 
             #user asked for exit
             self.trayIcon.hide()
@@ -181,7 +195,8 @@ class VineyardMainWindow(QtGui.QMainWindow):
     
     def __icon_activated(self, reason):
         if reason == QtGui.QSystemTrayIcon.DoubleClick:
-            self.showMaximized()
+            self.show()
+	    self.restore()
 	    
     def OnCheckUpdates(self):
 	QtGui.QMessageBox.about(self, "Updates", "Update check has not been implemented yet.")

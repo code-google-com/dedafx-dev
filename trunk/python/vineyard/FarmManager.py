@@ -6,6 +6,8 @@ from vineyard import __version__, AUTODISCOVERY_PORT, STATUS_PORT, FarmConfig
 import vineyard
 import vineyard.engines
 from vineyard.engines.BaseEngines import EngineRegistry
+from sqlalchemy import desc
+
 if os.name == 'nt':
     try:
         from _winreg import *
@@ -15,7 +17,7 @@ if os.name == 'nt':
 # this is an ugly global, but useful when the domain of the subnet is outside the control of the user
 # when the worker node tries to get it's ip address, this global means that the node will use the socket.getfqdn() in retrieving the ip
 # otherwise it will use, and continue to use socket.gethostname() in ip retrieval
-__useFullyQualifiedDomainName__ = True
+#__useFullyQualifiedDomainName__ = True
 
 # default to a short timeout on the status polling
 #(TODO) set this with a configuration setting
@@ -71,6 +73,10 @@ class JobQueueThread(threading.Thread):
         self.input_queue = Queue()    
         session = Session()
         metadata.create_all(engine)
+        
+        self.activeJobs = []
+        self.finishedJobs = []
+        self.queuedJobs = []
     
     def run(self):       
         while not self.isStopped(): 
@@ -81,8 +87,8 @@ class JobQueueThread(threading.Thread):
                 job = self.input_queue.get()
                 
                 try:
-                    print "job received, processing", job["job"]
-                    eng = EngineRegistry.getEngineByName(job["job"])
+                    print "job received, processing", job["name"]
+                    eng = EngineRegistry.getEngineByName(job["name"])
                 except KeyError, e:
                     print "Key Error", e
                     
@@ -91,6 +97,7 @@ class JobQueueThread(threading.Thread):
                         proc = eng.run(job)
                         while proc.returncode == None:
                             time.sleep(1)
+                            proc.poll()
                         print 'process returncode:', proc.returncode
                     except Exception, e:
                         print "<ERROR>", e
@@ -105,7 +112,7 @@ class JobQueueThread(threading.Thread):
     def isStopped(self):
         return self._stop.isSet()
     
-    # job is a dict {"job":"engine name", **kwargs}
+    # job is a dict {"name":"engine name", **kwargs}
     def addJob(self, job):
         self.input_queue.put(job)
         
@@ -191,9 +198,12 @@ class NodeQueueProcessingThread(threading.Thread):
                     newNode.ip_address = addr
                     
                     url = "http://"+str(addr)+":"+str(STATUS_PORT)
-                    ret = urllib.urlopen(url)
-                    #print ret.info()
-                    #print "ret=",  ret
+                    try:
+                        # calling this may time out, so just skip it... it will reprocess on the next broadcast event
+                        ret = urllib.urlopen(url)
+                    except IOError, e:
+                        continue
+
                     result = simplejson.load(ret)
                     
                     if result['name']:
@@ -354,22 +364,35 @@ class NodeCache(object):
         else:
             try:
                 self.autodisc.stop()
-            except: pass    
+            except: pass 
             
-    def submitJob(self, job, **kwargs):
-        # get the local file of the engine def
-        led = EngineRegistry.getLocalEngineDef(job.engine)
-        if led:
-            pass
-        # create a Job and Task entry in the local database, status is 'submitted'
-        # get all nodes with the correct engine, the correct pool, and sorted by priority from the local db
-        # iterate, trying to submit to each, continue on fail
-        # if all fail, report queue failure, else log job status as 'queued', and set the job's 
-        # upload the local engine file, verify it's the same as the one on the target machine (as it could be a different version)
-        # send the **kargs to the target machine
-        
-        # 
-        pass
+    #def getSubmitString(self, engine):
+    #    d = engine.getCmdDict()
+    #    print d
+    #    print urllib.urlencode(d)
+            
+    def submitJob(self, engine):
+        """this is the main submission entry point for the distributed system. It finds the most appropriate node and sends the job data to it"""
+        node = None
+        #submitstr = self.getSubmitString(engine)
+        # find the list of available nodes, ordered with descending priority (99->1)
+        for n in self.session.query(WorkerNode).filter_by(status='waiting').order_by(desc(WorkerNode.priority)).all():
+            print n.name, n.priority
+            if engine.name in n.engines:
+                print 'attempting to submit job to', n.name
+                
+                url = "http://"+str(n.ip_address)+":"+str(vineyard.STATUS_PORT)+'/submit'
+                result = simplejson.load(urllib.urlopen(url, urllib.urlencode(engine.getCmdDict()) ))
+                
+                if result['status'] == 'success':
+                    print 'job submitted'
+                    return True
+                elif result['status'] == 'failed':
+                    print n.name, result
+           
+        #if we did not return before this, no nodes could process the job
+        print '<error> no node found to process the job'
+        return False
         
             
     def update(self):
@@ -491,6 +514,8 @@ class StatusUpdateThread(threading.Thread):
                 else:
                     engines = str(result['engines'])
             node.engines = engines
+            
+            stat = result['status']
                         
             if result['status']:
                 return result['status']
@@ -553,13 +578,12 @@ class WorkerNodeHttpServer(object):
                     pluginFolder = e
         ip = ''
         
-        global __useFullyQualifiedDomainName__
         try:
-            if __useFullyQualifiedDomainName__:
+            if vineyard.USE_FQDN:
                 ip = str(socket.gethostbyname(socket.getfqdn()))
-                __useFullyQualifiedDomainName__ = True
+                vineyard.USE_FQDN = True
         except: 
-            __useFullyQualifiedDomainName__ = False
+            vineyard.USE_FQDN = False
             try:
                 ip = str(socket.gethostbyname(socket.gethostname()))
             except: pass
@@ -618,23 +642,19 @@ class WorkerNodeHttpServer(object):
         return simplejson.dumps({"jobs":{"finished":finishedJobs, "active":activeJobs, "queued":queuedJobs}})
     jobs.exposed = True
     
-    def submit(self, job=None, **kwargs):
+    def submit(self, **kwargs):
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        if job:
-            eng = EngineRegistry.getEngineByName(job)
-            print job, eng
+        if kwargs:
+            eng = EngineRegistry.getEngineByName(kwargs['name'])
             if eng:
                 try:
-                    params = {"job":job}
-                    params = dict(params, **kwargs)
-                    print params
-                    __JOBQUEUE_THREAD__.addJob(params)
+                    __JOBQUEUE_THREAD__.addJob(kwargs)
                     return simplejson.dumps({'status':"success", 'description':"job submitted", 'kwargs':kwargs})
                 except Exception, e:
                     return simplejson.dumps({'status':"failed", 'description':"Exception thrown during submittal. " + str(e), 'kwargs':kwargs})
             else:
-                return simplejson.dumps({'status':"failed", 'description':"Engine not supported for this job type.", 'kwargs':kwargs})
-        return simplejson.dumps({'status':"failed", 'description':"job is None! I cannot process a null job!", 'kwargs':kwargs})
+                return simplejson.dumps({'status':"failed", 'description':"Engine not found.", 'kwargs':kwargs})
+        return simplejson.dumps({'status':"failed", 'description':"engine name must be defined as part of the submission parameters", 'kwargs':kwargs})
     submit.exposed = True
     
     def lastResult(self):
@@ -753,7 +773,8 @@ if __name__ == '__main__':
     else:
         import vineyard.gui.MainWindow as farmmgr
         
-        farmmgr.run(sys.argv[1:])
+        #farmmgr.run(sys.argv[1:])
+        farmmgr.run(['show'])
        
         
     

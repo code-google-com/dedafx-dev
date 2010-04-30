@@ -1,5 +1,6 @@
 import os
 from vineyard.engines.BaseEngines import *
+from PyQt4 import QtGui, QtCore
 if os.name == 'nt':
     from _winreg import *
 
@@ -27,6 +28,8 @@ class AfterEffectsCS4Engine(RenderEngine):
                               'index_in_render_queue':None,
                               'mp_enabled':None,
                               'continue_on_missing_footage':None}
+        
+        self.commandToSend = {}
         
    
     def buildCommand(self, kwargs=None):
@@ -181,7 +184,52 @@ class AfterEffectsCS4Engine(RenderEngine):
                     
         self.commitConfig()
         return self.enabled
+    
+    def buildGui(self):
+        root = QtGui.QWidget()        
+        vbox = QtGui.QVBoxLayout()
         
+        # project file
+        hbox = QtGui.QHBoxLayout()
+        hbox.setMargin(0)
+        label = QtGui.QLabel('Project')
+        label.setAlignment(QtCore.Qt.AlignRight)
+        hbox.addWidget(label)
+        self.project_path = QtGui.QLineEdit(root)
+        hbox.addWidget(self.project_path)
+        fb = QtGui.QPushButton('...', root)
+        fb.setMaximumSize(QtCore.QSize(22,22))
+        def getFile():
+            fname = QtGui.QFileDialog.getOpenFileName(root, 'Select File', '', '*.aep')
+            self.project_path.setText(fname)
+        root.connect(fb, QtCore.SIGNAL('clicked()'), getFile)
+        hbox.addWidget(fb)
+        cb = self.makeCbEnabled(self.project_path, True)
+        fb.connect(cb, QtCore.SIGNAL("stateChanged(int)"), fb.setEnabled)
+        hbox.addWidget(cb)
+        vbox.addLayout(hbox)
+            
+        #'project':'',
+        #'comp': None,
+        #'mem_usage': None,
+        #'start_frame': None,
+        #'end_frame': None,
+        #'increment': None,
+        #'reuse': None,
+        #'output_module_template': None,
+        #'render_settings_template': None,
+        #'output_path': None,
+        #'log_file_path': None,
+        #'close_flag': None,
+        #'index_in_render_queue':None,
+        #'mp_enabled':None,
+        #'continue_on_missing_footage':None}
+        
+        root.setLayout(vbox)        
+        return root
+    
+    def getCmdDict(self):
+        return {'name':self.name, 'project':str(self.project_path.text())}
 
 AfterEffectsCS4Engine()
 

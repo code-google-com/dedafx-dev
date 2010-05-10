@@ -4,7 +4,7 @@ from PyQt4 import QtGui, QtCore
 #if os.name == 'nt':
     #from _winreg import *
 
-class AfterEffectsCS4Engine(RenderEngine):
+class RealFlow4Engine(RenderEngine):
          
     def __init__(self):
         RenderEngine.__init__(self, 
